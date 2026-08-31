@@ -34,6 +34,7 @@ import { Link } from 'react-router-dom';
 const PIE_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6'];
 
 export const EmployeeDashboard = () => {
+  const { user } = useAuth();
   const [data, setData] = useState(() => {
     try {
       const cached = sessionStorage.getItem('crm_emp_dash_cache');
@@ -100,9 +101,9 @@ export const EmployeeDashboard = () => {
   // Calculate Overall Average Score %
   const overallScore = progress
     ? Math.round(
-        (progress.monthlyLeads.percentage +
-          progress.monthlyCalls.percentage +
-          progress.monthlyConversions.percentage) /
+        ((progress.monthlyLeads?.percentage || 0) +
+          (progress.monthlyCalls?.percentage || 0) +
+          (progress.monthlyConversions?.percentage || 0)) /
           3
       )
     : 0;
