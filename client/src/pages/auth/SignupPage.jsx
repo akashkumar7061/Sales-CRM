@@ -106,7 +106,7 @@ export const SignupPage = () => {
             <Building2 className="h-7 w-7 text-white" />
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            Worker Registration
+            Employee Registration
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Join the Sales CRM sales team • Login will be via your Mobile Number
@@ -122,7 +122,7 @@ export const SignupPage = () => {
               </div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white">Registration Submitted!</h3>
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-sm mx-auto">
-                Worker account for mobile number{' '}
+                Employee account for mobile number{' '}
                 <strong className="text-indigo-600 dark:text-indigo-400">{formData.phone}</strong> has been
                 recorded and sent to the Administrator for approval.
               </p>
@@ -155,7 +155,7 @@ export const SignupPage = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Worker Full Name <span className="text-rose-500 dark:text-rose-400">*</span>
+                    Employee Full Name <span className="text-rose-500 dark:text-rose-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -169,7 +169,7 @@ export const SignupPage = () => {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Mobile Number <span className="text-rose-500 dark:text-rose-400">* (Login ID)</span>
+                    Mobile Number <span className="text-rose-500 dark:text-rose-400">*</span>
                   </label>
                   <input
                     type="tel"

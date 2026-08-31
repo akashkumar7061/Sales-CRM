@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { Building2, Shield, User, ArrowRight, AlertCircle, Sun, Moon, Phone, Mail } from 'lucide-react';
+import { Building2, Shield, User, ArrowRight, AlertCircle, Sun, Moon, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const LoginPage = () => {
@@ -33,7 +33,7 @@ export const LoginPage = () => {
       // Validate admin email
       const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
       if (!emailRegex.test(cleanInput.toLowerCase())) {
-        setErrorMessage('Please enter a valid administrator email address (e.g. admin@crm.com).');
+        setErrorMessage('Please enter a valid administrator email address (e.g. cleancruisers.in@gmail.com).');
         return;
       }
     }
@@ -103,8 +103,8 @@ export const LoginPage = () => {
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
-              <Phone className="h-3.5 w-3.5" />
-              <span>Worker Login (Mobile)</span>
+              <User className="h-3.5 w-3.5" />
+              <span>Employee Login</span>
             </button>
             <button
               type="button"
@@ -136,22 +136,15 @@ export const LoginPage = () => {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
-                <span>
-                  {activeTab === 'employee' ? 'Registered Mobile Number' : 'Admin Work Email Address'}
-                </span>
-                {activeTab === 'employee' && (
-                  <span className="text-[11px] font-normal text-indigo-600 dark:text-indigo-400">
-                    📱 10-Digit Mobile
-                  </span>
-                )}
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                {activeTab === 'employee' ? 'Mobile Number' : 'Admin Email Address'}
               </label>
               <div className="relative">
                 <input
                   type={activeTab === 'employee' ? 'tel' : 'email'}
                   required
                   placeholder={
-                    activeTab === 'employee' ? 'e.g. 9876543210' : 'cleancruisers.in@gmail.com'
+                    activeTab === 'employee' ? 'Enter 10-digit mobile number' : 'cleancruisers.in@gmail.com'
                   }
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
@@ -186,7 +179,7 @@ export const LoginPage = () => {
               ) : (
                 <>
                   <span>
-                    Sign In to {activeTab === 'admin' ? 'Admin Portal' : 'Worker Panel'}
+                    Sign In to {activeTab === 'admin' ? 'Admin Portal' : 'Employee Portal'}
                   </span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </>
@@ -200,7 +193,7 @@ export const LoginPage = () => {
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 New sales team member?{' '}
                 <Link to="/signup" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
-                  Register new worker account
+                  Create Employee Account
                 </Link>
               </p>
             </div>
