@@ -51,7 +51,7 @@ const cleanDatabase = async () => {
     // 8. Create single official System Administrator account
     const adminUser = await User.create({
       name: 'System Administrator',
-      email: 'admin@crm.com',
+      email: 'cleancruisers.in@gmail.com',
       password: 'Admin@123',
       phone: '9876543210',
       role: 'admin',
@@ -64,7 +64,7 @@ const cleanDatabase = async () => {
     console.log('✅ DATABASE 100% CLEANED & PRODUCTION READY!');
     console.log('========================================');
     console.log(`👑 ADMIN CREDENTIALS:`);
-    console.log(`📧 Email: admin@crm.com`);
+    console.log(`📧 Email: cleancruisers.in@gmail.com`);
     console.log(`🔑 Password: Admin@123`);
     console.log(`🛡️ Role: admin (Approved)`);
     console.log('========================================');

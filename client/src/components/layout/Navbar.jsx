@@ -4,6 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { LogOut, User as UserIcon, Menu, Bell, Shield, Briefcase, Sun, Moon } from 'lucide-react';
 import { RoleBadge } from '../common/Badge';
 import { NotificationDrawer } from '../common/NotificationDrawer';
+import { ChangePasswordModal } from '../common/ChangePasswordModal';
 import api from '../../api/axios';
 
 export const Navbar = ({ onToggleMobileSidebar }) => {
@@ -11,6 +12,7 @@ export const Navbar = ({ onToggleMobileSidebar }) => {
   const { theme, toggleTheme, isDark } = useTheme();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const fetchUnreadCount = async () => {
@@ -116,13 +118,24 @@ export const Navbar = ({ onToggleMobileSidebar }) => {
                   <p className="mt-1 text-xs text-indigo-600 dark:text-indigo-400 font-mono">{user?.phone}</p>
                 </div>
 
-                <div className="p-1">
+                <div className="p-1 space-y-0.5">
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      setIsPasswordModalOpen(true);
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    <Shield className="h-4 w-4 text-indigo-500" />
+                    <span>Change Password</span>
+                  </button>
+
                   <button
                     onClick={logout}
-                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
+                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
                   >
                     <LogOut className="h-4 w-4" />
-                    Sign Out
+                    <span>Sign Out</span>
                   </button>
                 </div>
               </div>
@@ -130,6 +143,12 @@ export const Navbar = ({ onToggleMobileSidebar }) => {
           </div>
         </div>
       </header>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+      />
 
       {/* Slide-out Notification Drawer */}
       <NotificationDrawer

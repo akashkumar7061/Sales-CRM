@@ -151,7 +151,7 @@ export const LoginPage = () => {
                   type={activeTab === 'employee' ? 'tel' : 'email'}
                   required
                   placeholder={
-                    activeTab === 'employee' ? 'e.g. 9876543210' : 'admin@crm.com'
+                    activeTab === 'employee' ? 'e.g. 9876543210' : 'cleancruisers.in@gmail.com'
                   }
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
