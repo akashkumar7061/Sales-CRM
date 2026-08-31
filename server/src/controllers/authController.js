@@ -77,27 +77,34 @@ exports.register = async (req, res) => {
   }
 };
 
-// @desc    Login user & get token
-// @route   POST /api/auth/login
-// @access  Public
 exports.login = async (req, res) => {
   try {
-    const { email, password, role } = req.body;
+    const { email, phone, password, role } = req.body;
+    const identifier = (phone || email || '').trim();
 
-    if (!email || !password) {
+    if (!identifier || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide both email and password.',
+        message: role === 'employee' ? 'Please provide mobile number and password.' : 'Please provide email and password.',
       });
     }
 
-    // Find user with password
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    // Clean phone/identifier (strip spaces and hyphens)
+    const cleanPhone = identifier.replace(/[^0-9+]/g, '');
+
+    // Find user by phone OR email
+    const user = await User.findOne({
+      $or: [
+        { phone: identifier },
+        { phone: cleanPhone },
+        { email: identifier.toLowerCase() },
+      ],
+    }).select('+password');
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password.',
+        message: role === 'employee' ? 'Invalid mobile number or password.' : 'Invalid email or password.',
       });
     }
 
@@ -106,7 +113,7 @@ exports.login = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password.',
+        message: role === 'employee' ? 'Invalid mobile number or password.' : 'Invalid email or password.',
       });
     }
 
