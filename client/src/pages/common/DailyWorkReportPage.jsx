@@ -13,6 +13,7 @@ import {
   Filter,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { DateRangePicker } from '../../components/common/DateRangePicker';
 
 export const DailyWorkReportPage = () => {
   const { user, isAdmin } = useAuth();
@@ -34,7 +35,8 @@ export const DailyWorkReportPage = () => {
   // Table History State (for Admin or Employee own)
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filterDate, setFilterDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [filterEmployee, setFilterEmployee] = useState('all');
   const [employees, setEmployees] = useState([]);
 
@@ -54,20 +56,16 @@ export const DailyWorkReportPage = () => {
   const fetchReports = async () => {
     setLoading(true);
     try {
-      if (isAdmin) {
-        const params = {
-          date: filterDate || undefined,
-          employeeId: filterEmployee !== 'all' ? filterEmployee : undefined,
-        };
-        const res = await api.get('/reports/all', { params });
-        if (res.data.success) {
-          setReports(res.data.reports || []);
-        }
-      } else {
-        const res = await api.get('/reports/my-reports');
-        if (res.data.success) {
-          setReports(res.data.reports || []);
-        }
+      const params = {
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        employeeId: isAdmin && filterEmployee !== 'all' ? filterEmployee : undefined,
+      };
+
+      const endpoint = isAdmin ? '/reports/all' : '/reports/my-reports';
+      const res = await api.get(endpoint, { params });
+      if (res.data.success) {
+        setReports(res.data.reports || []);
       }
     } catch (err) {
       toast.error('Failed to load daily work reports.');
@@ -78,7 +76,7 @@ export const DailyWorkReportPage = () => {
 
   useEffect(() => {
     fetchReports();
-  }, [isAdmin, filterDate, filterEmployee]);
+  }, [isAdmin, startDate, endDate, filterEmployee]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -285,47 +283,44 @@ export const DailyWorkReportPage = () => {
         </form>
       )}
 
-      {/* Admin Filters */}
-      {isAdmin && (
-        <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 shadow-xs">
+      {/* Date Range & Team Filters */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-slate-400" />
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Filter Records:</span>
+            <Filter className="h-4 w-4 text-indigo-500" />
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              Filter by Date Range:
+            </span>
           </div>
 
-          <input
-            type="date"
-            value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
-            className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none"
+          <DateRangePicker
+            startDate={startDate}
+            endDate={endDate}
+            onDateChange={(start, end) => {
+              setStartDate(start);
+              setEndDate(end);
+            }}
+            showPresets={true}
           />
-
-          <select
-            value={filterEmployee}
-            onChange={(e) => setFilterEmployee(e.target.value)}
-            className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none"
-          >
-            <option value="all">All Employees</option>
-            {employees.map((e) => (
-              <option key={e._id} value={e._id}>
-                {e.name}
-              </option>
-            ))}
-          </select>
-
-          {(filterDate || filterEmployee !== 'all') && (
-            <button
-              onClick={() => {
-                setFilterDate('');
-                setFilterEmployee('all');
-              }}
-              className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline"
-            >
-              Clear Filters
-            </button>
-          )}
         </div>
-      )}
+
+        {isAdmin && (
+          <div className="flex items-center gap-2">
+            <select
+              value={filterEmployee}
+              onChange={(e) => setFilterEmployee(e.target.value)}
+              className="rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-950/40 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 focus:outline-none"
+            >
+              <option value="all">👤 All Employees</option>
+              {employees.map((e) => (
+                <option key={e._id} value={e._id}>
+                  {e.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
 
       {/* Reports Table */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">

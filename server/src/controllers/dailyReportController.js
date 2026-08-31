@@ -99,8 +99,24 @@ exports.getMyDailyReports = async (req, res) => {
     const limit = parseInt(req.query.limit, 10) || 30;
     const skip = (page - 1) * limit;
 
-    const total = await DailyReport.countDocuments({ userId: req.user._id });
-    const reports = await DailyReport.find({ userId: req.user._id })
+    const query = { userId: req.user._id };
+
+    if (req.query.startDate && req.query.endDate) {
+      const start = new Date(req.query.startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(req.query.endDate);
+      end.setHours(23, 59, 59, 999);
+      query.date = { $gte: start, $lte: end };
+    } else if (req.query.date) {
+      const singleDate = new Date(req.query.date);
+      singleDate.setHours(0, 0, 0, 0);
+      const endSingle = new Date(singleDate);
+      endSingle.setHours(23, 59, 59, 999);
+      query.date = { $gte: singleDate, $lte: endSingle };
+    }
+
+    const total = await DailyReport.countDocuments(query);
+    const reports = await DailyReport.find(query)
       .sort({ date: -1 })
       .skip(skip)
       .limit(limit);

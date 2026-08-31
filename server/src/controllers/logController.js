@@ -5,7 +5,7 @@ const ActivityLog = require('../models/ActivityLog');
 // @access  Private
 exports.getActivityLogs = async (req, res) => {
   try {
-    const { limit = 50, page = 1, action } = req.query;
+    const { limit = 50, page = 1, action, startDate, endDate } = req.query;
     const query = {};
 
     // If employee, can only see own activities; Admin sees all
@@ -15,6 +15,20 @@ exports.getActivityLogs = async (req, res) => {
 
     if (action && action !== 'all') {
       query.action = action;
+    }
+
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        query.createdAt.$gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = end;
+      }
     }
 
     const pageNum = parseInt(page, 10) || 1;

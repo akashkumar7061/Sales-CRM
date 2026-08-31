@@ -19,6 +19,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { DateRangePicker } from '../../components/common/DateRangePicker';
 import {
   generateCustomersPdf,
   generateCallLogsPdf,
@@ -308,8 +309,8 @@ export const DataBackupCenterPage = () => {
           <span>Filters for Leads Export</span>
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-          <div>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs">
+          <div className="w-full md:w-72">
             <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Business / Brand Filter
             </label>
@@ -326,25 +327,16 @@ export const DataBackupCenterPage = () => {
 
           <div>
             <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Start Date
+              Registration Date Range (Optional)
             </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-slate-900 dark:text-white focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              End Date
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-slate-900 dark:text-white focus:outline-none"
+            <DateRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onDateChange={(start, end) => {
+                setStartDate(start);
+                setEndDate(end);
+              }}
+              showPresets={true}
             />
           </div>
         </div>

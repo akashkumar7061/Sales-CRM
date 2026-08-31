@@ -3,19 +3,27 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import { History, Shield, User, Filter, RefreshCw, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { DateRangePicker } from '../../components/common/DateRangePicker';
 
 export const ActivityLogsPage = () => {
   const { user, isAdmin } = useAuth();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionFilter, setActionFilter] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [totalCount, setTotalCount] = useState(0);
 
   const fetchLogs = async () => {
     setLoading(true);
     try {
       const res = await api.get('/logs', {
-        params: { action: actionFilter, limit: 100 },
+        params: {
+          action: actionFilter !== 'all' ? actionFilter : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+          limit: 100,
+        },
       });
       if (res.data.success) {
         setLogs(res.data.logs);
@@ -30,7 +38,7 @@ export const ActivityLogsPage = () => {
 
   useEffect(() => {
     fetchLogs();
-  }, [actionFilter]);
+  }, [actionFilter, startDate, endDate]);
 
   const getActionBadgeClass = (action) => {
     if (action.includes('CREATE')) return 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30';
@@ -53,7 +61,7 @@ export const ActivityLogsPage = () => {
           </h1>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {isAdmin
-              ? 'Complete chronological record of all customer and employee modifications'
+              ? 'Complete chronological record of all customer, employee, and target modifications'
               : 'Chronological timeline of customer operations performed by you'}
           </p>
         </div>
@@ -62,9 +70,9 @@ export const ActivityLogsPage = () => {
           <select
             value={actionFilter}
             onChange={(e) => setActionFilter(e.target.value)}
-            className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-xs text-slate-700 dark:text-slate-300 focus:border-indigo-500 focus:outline-none"
+            className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-xs text-slate-700 dark:text-slate-300 focus:border-indigo-500 focus:outline-none font-semibold"
           >
-            <option value="all">All Action Types</option>
+            <option value="all">⚡ All Action Types</option>
             <option value="CREATE_CUSTOMER">Create Customer</option>
             <option value="UPDATE_CUSTOMER">Update Customer</option>
             <option value="DELETE_CUSTOMER">Delete Customer</option>
@@ -83,6 +91,26 @@ export const ActivityLogsPage = () => {
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
+      </div>
+
+      {/* Date Range Filter Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-indigo-500" />
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+            Filter Audit Logs by Date Range:
+          </span>
+        </div>
+
+        <DateRangePicker
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(start, end) => {
+            setStartDate(start);
+            setEndDate(end);
+          }}
+          showPresets={true}
+        />
       </div>
 
       {/* Logs Table */}
@@ -111,7 +139,7 @@ export const ActivityLogsPage = () => {
               ) : logs.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-slate-500">
-                    No activity logs recorded.
+                    No activity logs recorded for this date range.
                   </td>
                 </tr>
               ) : (

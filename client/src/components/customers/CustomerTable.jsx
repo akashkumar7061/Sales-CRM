@@ -7,6 +7,7 @@ import { CustomerDetailModal } from './CustomerDetailModal';
 import { CallLogModal } from './CallLogModal';
 import { WhatsAppModal } from '../common/WhatsAppModal';
 import { ConfirmModal } from '../common/ConfirmModal';
+import { DateRangePicker } from '../common/DateRangePicker';
 import {
   Search,
   Filter,
@@ -561,6 +562,27 @@ export const CustomerTable = ({
             Reset Filters
           </button>
         </div>
+      </div>
+
+      {/* Date Range Filter Bar with Quick Presets */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white dark:bg-slate-900/60 px-4 py-2.5 border border-slate-200 dark:border-slate-800/80 shadow-xs">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-indigo-500" />
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+            Filter by Registration Date Range:
+          </span>
+        </div>
+
+        <DateRangePicker
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(start, end) => {
+            setStartDate(start);
+            setEndDate(end);
+            setPage(1);
+          }}
+          showPresets={true}
+        />
       </div>
 
       {/* Main Customers Table Container */}
