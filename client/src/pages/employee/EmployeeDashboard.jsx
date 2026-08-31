@@ -22,7 +22,11 @@ import {
   CalendarDays,
   Target,
   AlertTriangle,
-  FileText,
+  Flame,
+  Award,
+  Zap,
+  CheckCircle,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { Link } from 'react-router-dom';
@@ -77,6 +81,16 @@ export const EmployeeDashboard = () => {
   const { stats, charts, upcomingFollowups, overdueFollowupList, myRecentCustomers } = data || {};
   const { target, progress } = targetData || {};
 
+  // Calculate Overall Average Score %
+  const overallScore = progress
+    ? Math.round(
+        (progress.monthlyLeads.percentage +
+          progress.monthlyCalls.percentage +
+          progress.monthlyConversions.percentage) /
+          3
+      )
+    : 0;
+
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
@@ -89,7 +103,7 @@ export const EmployeeDashboard = () => {
             </h1>
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {user?.designation} • Here is your sales targets, follow-up alarms, and lead pipeline
+            {user?.designation || 'Sales Executive'} • Here is your sales quota breakdown, targets, and active lead pipeline
           </p>
         </div>
 
@@ -112,108 +126,262 @@ export const EmployeeDashboard = () => {
         </div>
       </div>
 
-      {/* Target Progress Banner */}
+      {/* 🎯 Full Sales Targets & Performance Dashboard */}
       {progress && (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                <Target className="h-5 w-5" />
+        <div className="rounded-2xl border border-indigo-200 dark:border-indigo-500/30 bg-gradient-to-br from-indigo-50/40 dark:from-indigo-950/20 via-white dark:via-slate-900 to-slate-50 dark:to-slate-900/50 p-5 md:p-6 shadow-xs space-y-5">
+          {/* Target Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-600/25">
+                <Target className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wide">
-                  Monthly Target Quotas ({target?.month})
-                </h3>
-                <p className="text-[11px] text-slate-400">Track your assigned vs achieved sales milestones</p>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-extrabold text-slate-900 dark:text-white tracking-tight">
+                    My Sales Targets & Performance Quotas
+                  </h2>
+                  <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30">
+                    Month: {target?.month}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Target defined by Admin for your leads generation, phone calling, and deal conversions
+                </p>
+              </div>
+            </div>
+
+            {/* Overall Achievement Badge */}
+            <div className="flex items-center gap-2.5 self-start sm:self-auto bg-white dark:bg-slate-950 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
+              <div className="text-right">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                  Overall Target Score
+                </span>
+                <span className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400">
+                  {overallScore}% Achieved
+                </span>
+              </div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-bold text-xs border border-indigo-200 dark:border-indigo-500/20">
+                {overallScore >= 100 ? '🏆' : overallScore >= 75 ? '🔥' : '⚡'}
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {/* Monthly Leads */}
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 space-y-2">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-500">Monthly Leads</span>
-                <span className="font-bold text-indigo-600 dark:text-indigo-400">
-                  {progress.monthlyLeads.achieved} / {progress.monthlyLeads.assigned}
-                </span>
-              </div>
-              <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                <div
-                  className="h-full bg-indigo-600 rounded-full transition-all"
-                  style={{ width: `${progress.monthlyLeads.percentage}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-[10px] text-slate-400">
-                <span>{progress.monthlyLeads.percentage}% Done</span>
-                <span>{progress.monthlyLeads.remaining} Remaining</span>
-              </div>
+          {/* Monthly Target Cards (3 Pillars: Leads, Calls, Conversions) */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5 text-indigo-500" />
+                <span>Monthly Quota Milestones</span>
+              </h3>
             </div>
 
-            {/* Monthly Conversions */}
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 space-y-2">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-500">Deals Won</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                  {progress.monthlyConversions.achieved} / {progress.monthlyConversions.assigned}
-                </span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* 1. Monthly Leads Target */}
+              <div className="rounded-xl border border-blue-200 dark:border-blue-500/30 bg-white dark:bg-slate-950 p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
+                      <Users className="h-4 w-4" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      New Leads Target
+                    </span>
+                  </div>
+                  <span className="text-xs font-extrabold text-blue-600 dark:text-blue-400">
+                    {progress.monthlyLeads.percentage}%
+                  </span>
+                </div>
+
+                <div className="flex items-baseline justify-between">
+                  <div>
+                    <span className="text-xl font-black text-slate-900 dark:text-white">
+                      {progress.monthlyLeads.achieved}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-400">
+                      {' '}/ {progress.monthlyLeads.assigned} leads
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-500">
+                    {progress.monthlyLeads.remaining > 0
+                      ? `${progress.monthlyLeads.remaining} remaining`
+                      : '✅ Target Reached!'}
+                  </span>
+                </div>
+
+                <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  <div
+                    className="h-full bg-blue-600 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, progress.monthlyLeads.percentage)}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                <div
-                  className="h-full bg-emerald-500 rounded-full transition-all"
-                  style={{ width: `${progress.monthlyConversions.percentage}%` }}
-                />
+
+              {/* 2. Monthly Calls Target */}
+              <div className="rounded-xl border border-purple-200 dark:border-purple-500/30 bg-white dark:bg-slate-950 p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400">
+                      <PhoneCall className="h-4 w-4" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      Phone Calls Outreach
+                    </span>
+                  </div>
+                  <span className="text-xs font-extrabold text-purple-600 dark:text-purple-400">
+                    {progress.monthlyCalls.percentage}%
+                  </span>
+                </div>
+
+                <div className="flex items-baseline justify-between">
+                  <div>
+                    <span className="text-xl font-black text-slate-900 dark:text-white">
+                      {progress.monthlyCalls.achieved}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-400">
+                      {' '}/ {progress.monthlyCalls.assigned} calls
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-500">
+                    {progress.monthlyCalls.remaining > 0
+                      ? `${progress.monthlyCalls.remaining} remaining`
+                      : '✅ Target Reached!'}
+                  </span>
+                </div>
+
+                <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  <div
+                    className="h-full bg-purple-600 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, progress.monthlyCalls.percentage)}%` }}
+                  />
+                </div>
               </div>
-              <div className="flex justify-between text-[10px] text-slate-400">
-                <span>{progress.monthlyConversions.percentage}% Done</span>
-                <span>{progress.monthlyConversions.remaining} Remaining</span>
+
+              {/* 3. Monthly Conversions / Deals Won */}
+              <div className="rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-white dark:bg-slate-950 p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="h-4 w-4" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      Deals Converted (Won)
+                    </span>
+                  </div>
+                  <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400">
+                    {progress.monthlyConversions.percentage}%
+                  </span>
+                </div>
+
+                <div className="flex items-baseline justify-between">
+                  <div>
+                    <span className="text-xl font-black text-slate-900 dark:text-white">
+                      {progress.monthlyConversions.achieved}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-400">
+                      {' '}/ {progress.monthlyConversions.assigned} sales
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-500">
+                    {progress.monthlyConversions.remaining > 0
+                      ? `${progress.monthlyConversions.remaining} remaining`
+                      : '🏆 Goal Achieved!'}
+                  </span>
+                </div>
+
+                <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, progress.monthlyConversions.percentage)}%` }}
+                  />
+                </div>
               </div>
             </div>
+          </div>
 
+          {/* Today's Daily Target Checklist & Manager Note */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
             {/* Daily Leads */}
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 space-y-2">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-500">Today's Leads</span>
-                <span className="font-bold text-slate-900 dark:text-white">
-                  {progress.dailyLeads.achieved} / {progress.dailyLeads.assigned}
+            <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
+                  Today's Leads Goal
+                </span>
+                <span className="text-xs font-extrabold text-slate-900 dark:text-white">
+                  {progress.dailyLeads.achieved} / {progress.dailyLeads.assigned} Added
                 </span>
               </div>
-              <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                <div
-                  className="h-full bg-blue-500 rounded-full transition-all"
-                  style={{ width: `${progress.dailyLeads.percentage}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-[10px] text-slate-400">
-                <span>{progress.dailyLeads.percentage}% Done</span>
-                <span>{progress.dailyLeads.remaining} to Goal</span>
-              </div>
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                  progress.dailyLeads.achieved >= progress.dailyLeads.assigned
+                    ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+                }`}
+              >
+                {progress.dailyLeads.percentage}%
+              </span>
             </div>
 
             {/* Daily Calls */}
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 space-y-2">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-500">Today's Calls</span>
-                <span className="font-bold text-purple-600 dark:text-purple-400">
-                  {progress.dailyCalls.achieved} / {progress.dailyCalls.assigned}
+            <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
+                  Today's Calls Goal
+                </span>
+                <span className="text-xs font-extrabold text-slate-900 dark:text-white">
+                  {progress.dailyCalls.achieved} / {progress.dailyCalls.assigned} Dialed
                 </span>
               </div>
-              <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                <div
-                  className="h-full bg-purple-500 rounded-full transition-all"
-                  style={{ width: `${progress.dailyCalls.percentage}%` }}
-                />
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                  progress.dailyCalls.achieved >= progress.dailyCalls.assigned
+                    ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300'
+                }`}
+              >
+                {progress.dailyCalls.percentage}%
+              </span>
+            </div>
+
+            {/* Daily Conversions */}
+            <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
+                  Today's Conversions
+                </span>
+                <span className="text-xs font-extrabold text-slate-900 dark:text-white">
+                  {progress.dailyConversions?.achieved || 0} / {progress.dailyConversions?.assigned || 1} Closed
+                </span>
               </div>
-              <div className="flex justify-between text-[10px] text-slate-400">
-                <span>{progress.dailyCalls.percentage}% Done</span>
-                <span>{progress.dailyCalls.remaining} to Goal</span>
-              </div>
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                  (progress.dailyConversions?.achieved || 0) >= (progress.dailyConversions?.assigned || 1)
+                    ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300'
+                }`}
+              >
+                {progress.dailyConversions?.percentage || 0}%
+              </span>
             </div>
           </div>
+
+          {/* Manager Strategy Note (if present) */}
+          {target?.notes && (
+            <div className="p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-500/30 flex items-start gap-2.5">
+              <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-xs font-bold text-amber-900 dark:text-amber-300">
+                  Manager Strategy Guidance:
+                </h4>
+                <p className="text-xs text-amber-800 dark:text-amber-400 mt-0.5">
+                  {target.notes}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* KPI Stats */}
+      {/* KPI Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="My Total Leads"
