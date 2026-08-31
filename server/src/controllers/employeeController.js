@@ -90,29 +90,42 @@ exports.createEmployee = async (req, res) => {
   try {
     const { name, email, password, phone, designation, role, status } = req.body;
 
-    if (!name || !email || !password || !phone) {
+    if (!name || !password || !phone) {
       return res.status(400).json({
         success: false,
-        message: 'Name, email, password, and phone are required.',
+        message: 'Name, mobile phone, and password are required.',
       });
     }
 
-    const existing = await User.findOne({ email: email.toLowerCase() });
-    if (existing) {
+    const cleanPhone = phone.trim();
+    const phoneExists = await User.findOne({ phone: cleanPhone });
+    if (phoneExists) {
       return res.status(400).json({
         success: false,
-        message: 'A user with this email already exists.',
+        message: 'An employee with this mobile number already exists.',
       });
+    }
+
+    let cleanEmail = '';
+    if (email && email.trim()) {
+      cleanEmail = email.trim().toLowerCase();
+      const existing = await User.findOne({ email: cleanEmail });
+      if (existing) {
+        return res.status(400).json({
+          success: false,
+          message: 'A user with this email already exists.',
+        });
+      }
     }
 
     const colors = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4'];
     const avatarColor = colors[Math.floor(Math.random() * colors.length)];
 
     const user = await User.create({
-      name,
-      email: email.toLowerCase(),
+      name: name.trim(),
+      email: cleanEmail,
       password,
-      phone,
+      phone: cleanPhone,
       designation: designation || 'Sales Executive',
       role: role || 'employee',
       status: status || 'approved',
@@ -122,7 +135,7 @@ exports.createEmployee = async (req, res) => {
     await createLog({
       user: req.user,
       action: 'APPROVE_EMPLOYEE',
-      details: `Admin created employee account for ${user.name} (${user.email}).`,
+      details: `Admin created employee account for ${user.name} (Phone: ${user.phone}).`,
     });
 
     res.status(201).json({

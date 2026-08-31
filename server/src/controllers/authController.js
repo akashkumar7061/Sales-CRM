@@ -16,29 +16,43 @@ exports.register = async (req, res) => {
   try {
     const { name, email, password, phone, designation } = req.body;
 
-    if (!name || !email || !password || !phone) {
+    if (!name || !phone || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required fields (name, email, password, phone)',
+        message: 'Please provide employee name, mobile number, and password.',
       });
     }
 
-    // Strict Email Format Validation
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailRegex.test(email.trim())) {
+    const cleanPhone = phone.trim();
+
+    // Check if mobile phone is already registered
+    const phoneExists = await User.findOne({ phone: cleanPhone });
+    if (phoneExists) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide a valid work email address (e.g. yourname@company.com).',
+        message: 'An account with this mobile number already exists. Please login directly.',
       });
     }
 
-    // Check if user exists
-    const userExists = await User.findOne({ email: email.toLowerCase().trim() });
-    if (userExists) {
-      return res.status(400).json({
-        success: false,
-        message: 'An account with this email address already exists.',
-      });
+    // Optional Email Validation (if provided)
+    let cleanEmail = '';
+    if (email && email.trim()) {
+      cleanEmail = email.trim().toLowerCase();
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(cleanEmail)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Please provide a valid email address or leave it blank.',
+        });
+      }
+
+      const emailExists = await User.findOne({ email: cleanEmail });
+      if (emailExists) {
+        return res.status(400).json({
+          success: false,
+          message: 'An account with this email address already exists.',
+        });
+      }
     }
 
     // Generate random avatar background color
@@ -47,11 +61,11 @@ exports.register = async (req, res) => {
 
     // Create user (defaults to employee & pending approval)
     const user = await User.create({
-      name,
-      email: email.toLowerCase(),
+      name: name.trim(),
+      email: cleanEmail,
       password,
-      phone,
-      designation: designation || 'Sales Executive',
+      phone: cleanPhone,
+      designation: designation ? designation.trim() : 'Sales Executive',
       role: 'employee',
       status: 'pending', // Requires admin approval
       avatarColor,

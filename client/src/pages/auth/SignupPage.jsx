@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { Building2, UserPlus, ArrowLeft, CheckCircle2, AlertCircle, Clock, Sun, Moon } from 'lucide-react';
+import { Building2, UserPlus, ArrowLeft, CheckCircle2, AlertCircle, Clock, Sun, Moon, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const SignupPage = () => {
@@ -27,11 +27,19 @@ export const SignupPage = () => {
     e.preventDefault();
     setErrorMessage('');
 
-    const emailTrimmed = formData.email.trim().toLowerCase();
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailRegex.test(emailTrimmed)) {
-      setErrorMessage('Please enter a valid work email address (e.g. name@domain.com).');
+    const cleanPhone = formData.phone.trim().replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      setErrorMessage('Please enter a valid 10-digit mobile number.');
       return;
+    }
+
+    const cleanEmail = formData.email.trim().toLowerCase();
+    if (cleanEmail) {
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(cleanEmail)) {
+        setErrorMessage('Please enter a valid email address or leave it empty.');
+        return;
+      }
     }
 
     if (formData.password !== formData.confirmPassword) {
@@ -48,8 +56,8 @@ export const SignupPage = () => {
     try {
       const res = await register({
         name: formData.name.trim(),
-        email: emailTrimmed,
-        phone: formData.phone.trim(),
+        email: cleanEmail,
+        phone: cleanPhone,
         designation: formData.designation.trim() || 'Sales Executive',
         password: formData.password,
       });
@@ -97,8 +105,12 @@ export const SignupPage = () => {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 to-blue-500 shadow-xl shadow-indigo-600/30">
             <Building2 className="h-7 w-7 text-white" />
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">Employee Onboarding</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Join the sales team customer management portal</p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            Worker Registration
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Join the Sales CRM sales team • Login will be via your Mobile Number
+          </p>
         </div>
 
         {/* Card */}
@@ -110,14 +122,15 @@ export const SignupPage = () => {
               </div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white">Registration Submitted!</h3>
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-sm mx-auto">
-                Your employee account for <strong className="text-indigo-600 dark:text-indigo-400">{formData.email}</strong>{' '}
-                has been recorded and sent to the Administrator for approval.
+                Worker account for mobile number{' '}
+                <strong className="text-indigo-600 dark:text-indigo-400">{formData.phone}</strong> has been
+                recorded and sent to the Administrator for approval.
               </p>
               <div className="rounded-xl bg-slate-50 dark:bg-slate-950 p-4 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 flex items-start gap-2.5 text-left">
                 <Clock className="h-4 w-4 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
                 <span>
-                  You will be able to log in to your dashboard immediately once an admin approves
-                  your request.
+                  Once approved by Admin, you can log in directly using your <strong>Mobile Number</strong>{' '}
+                  and Password.
                 </span>
               </div>
               <div className="pt-2">
@@ -142,12 +155,12 @@ export const SignupPage = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Full Name <span className="text-rose-500 dark:text-rose-400">*</span>
+                    Worker Full Name <span className="text-rose-500 dark:text-rose-400">*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. John Doe"
+                    placeholder="e.g. Ramesh Kumar"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
@@ -156,21 +169,7 @@ export const SignupPage = () => {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Work Email <span className="text-rose-500 dark:text-rose-400">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="john@company.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Mobile Phone <span className="text-rose-500 dark:text-rose-400">*</span>
+                    Mobile Number <span className="text-rose-500 dark:text-rose-400">* (Login ID)</span>
                   </label>
                   <input
                     type="tel"
@@ -178,17 +177,30 @@ export const SignupPage = () => {
                     placeholder="e.g. 9876543210"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="w-full rounded-xl border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-slate-950 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-indigo-500 focus:outline-none font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Email Address <span className="text-slate-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="name@gmail.com (Optional)"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Designation / Title
+                    Designation / Role
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Senior Sales Executive, Account Manager"
+                    placeholder="e.g. Sales Executive, Field Agent"
                     value={formData.designation}
                     onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
                     className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
@@ -225,8 +237,7 @@ export const SignupPage = () => {
               </div>
 
               <div className="rounded-xl bg-slate-50 dark:bg-slate-950/60 p-3 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400">
-                ⚠️ <strong className="text-slate-800 dark:text-slate-300">Admin Approval Required:</strong> All newly
-                created accounts must be approved by an administrator before logging in.
+                ⚠️ <strong className="text-slate-800 dark:text-slate-300">Admin Approval Required:</strong> Account will be activated once approved by the Admin.
               </div>
 
               <button
@@ -248,7 +259,7 @@ export const SignupPage = () => {
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Already registered?{' '}
                   <Link to="/login" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
-                    Sign in here
+                    Sign in with Mobile Number
                   </Link>
                 </p>
               </div>

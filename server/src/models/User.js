@@ -10,11 +10,9 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: [true, 'Please provide email address'],
-      unique: true,
       lowercase: true,
       trim: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
+      default: '',
     },
     password: {
       type: String,
@@ -24,8 +22,9 @@ const userSchema = new mongoose.Schema(
     },
     phone: {
       type: String,
-      required: [true, 'Please provide a phone number'],
+      required: [true, 'Please provide mobile number'],
       trim: true,
+      index: true,
     },
     designation: {
       type: String,
