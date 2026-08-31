@@ -74,11 +74,6 @@ export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
       icon: Clock,
     },
     {
-      name: 'Export My Data',
-      path: '/employee/export-center',
-      icon: DownloadCloud,
-    },
-    {
       name: 'My Activity Logs',
       path: '/employee/logs',
       icon: History,

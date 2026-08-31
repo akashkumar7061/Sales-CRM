@@ -137,7 +137,6 @@ function App() {
                 <Route path="customers" element={<EmployeeCustomers />} />
                 <Route path="dashboard" element={<EmployeeDashboard />} />
                 <Route path="reports" element={<DailyWorkReportPage />} />
-                <Route path="export-center" element={<DataBackupCenterPage />} />
                 <Route path="logs" element={<ActivityLogsPage />} />
               </Route>
 
