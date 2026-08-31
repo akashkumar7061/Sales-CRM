@@ -27,6 +27,13 @@ export const SignupPage = () => {
     e.preventDefault();
     setErrorMessage('');
 
+    const emailTrimmed = formData.email.trim().toLowerCase();
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(emailTrimmed)) {
+      setErrorMessage('Please enter a valid work email address (e.g. name@domain.com).');
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setErrorMessage('Passwords do not match.');
       return;
@@ -40,10 +47,10 @@ export const SignupPage = () => {
     setLoading(true);
     try {
       const res = await register({
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        designation: formData.designation,
+        name: formData.name.trim(),
+        email: emailTrimmed,
+        phone: formData.phone.trim(),
+        designation: formData.designation.trim() || 'Sales Executive',
         password: formData.password,
       });
 

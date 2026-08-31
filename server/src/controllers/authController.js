@@ -23,8 +23,17 @@ exports.register = async (req, res) => {
       });
     }
 
+    // Strict Email Format Validation
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid work email address (e.g. yourname@company.com).',
+      });
+    }
+
     // Check if user exists
-    const userExists = await User.findOne({ email: email.toLowerCase() });
+    const userExists = await User.findOne({ email: email.toLowerCase().trim() });
     if (userExists) {
       return res.status(400).json({
         success: false,
