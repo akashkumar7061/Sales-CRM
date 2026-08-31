@@ -7,9 +7,11 @@ import { CustomerDetailModal } from '../../components/customers/CustomerDetailMo
 import { CustomerFormModal } from '../../components/customers/CustomerFormModal';
 import { ImportModal } from '../../components/import/ImportModal';
 import { ChangePasswordModal } from '../../components/common/ChangePasswordModal';
+import { AddEmployeeModal } from '../../components/employees/AddEmployeeModal';
 import {
   Users,
   UserCheck,
+  UserPlus,
   Calendar,
   CheckCircle2,
   Clock,
@@ -65,6 +67,7 @@ export const AdminDashboard = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
 
   const fetchStats = async () => {
     try {
@@ -111,6 +114,25 @@ export const AdminDashboard = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Add Employee Direct Shortcut */}
+          <button
+            type="button"
+            onClick={() => setIsAddEmployeeOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-purple-200 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-950/40 px-3.5 py-2 text-xs font-bold text-purple-700 dark:text-purple-300 hover:bg-purple-100 transition-colors shadow-xs"
+            title="Create New Employee Account"
+          >
+            <UserPlus className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            <span>+ Add Employee</span>
+          </button>
+
+          <Link
+            to="/admin/employees"
+            className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-xs"
+          >
+            <Users className="h-3.5 w-3.5" />
+            <span>Team List</span>
+          </Link>
+
           <button
             type="button"
             onClick={() => setIsPasswordModalOpen(true)}
@@ -434,6 +456,13 @@ export const AdminDashboard = () => {
       <ChangePasswordModal
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
+      />
+
+      {/* Add New Employee Modal */}
+      <AddEmployeeModal
+        isOpen={isAddEmployeeOpen}
+        onClose={() => setIsAddEmployeeOpen(false)}
+        onSuccess={fetchStats}
       />
     </div>
   );
