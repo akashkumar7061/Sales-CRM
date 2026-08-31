@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const dotenv = require('dotenv');
 const path = require('path');
 const connectDB = require('./config/db');
@@ -13,6 +14,7 @@ connectDB();
 const app = express();
 
 // Middlewares
+app.use(compression());
 app.use(
   cors({
     origin: '*', // Allow all origins for dev/internal network access

@@ -34,10 +34,25 @@ import { Link } from 'react-router-dom';
 const PIE_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6'];
 
 export const EmployeeDashboard = () => {
-  const { user } = useAuth();
-  const [data, setData] = useState(null);
-  const [targetData, setTargetData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('crm_emp_dash_cache');
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [targetData, setTargetData] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('crm_emp_target_cache');
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    return !sessionStorage.getItem('crm_emp_dash_cache');
+  });
 
   // Modals
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -46,7 +61,6 @@ export const EmployeeDashboard = () => {
   const [customerForWhatsApp, setCustomerForWhatsApp] = useState(null);
 
   const fetchStats = async () => {
-    setLoading(true);
     try {
       const [resStats, resTarget] = await Promise.all([
         api.get('/analytics/employee'),
@@ -55,9 +69,11 @@ export const EmployeeDashboard = () => {
 
       if (resStats.data.success) {
         setData(resStats.data);
+        sessionStorage.setItem('crm_emp_dash_cache', JSON.stringify(resStats.data));
       }
       if (resTarget.data.success) {
         setTargetData(resTarget.data);
+        sessionStorage.setItem('crm_emp_target_cache', JSON.stringify(resTarget.data));
       }
     } catch (error) {
       console.error('Failed to load employee stats:', error);

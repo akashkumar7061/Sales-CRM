@@ -46,8 +46,17 @@ const PRIORITY_COLORS = { Hot: '#ef4444', Warm: '#f59e0b', Cold: '#3b82f6' };
 
 export const AdminDashboard = () => {
   const { user } = useAuth();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('crm_admin_dash_cache');
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    return !sessionStorage.getItem('crm_admin_dash_cache');
+  });
 
   // Modals
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -55,11 +64,11 @@ export const AdminDashboard = () => {
   const [isImportOpen, setIsImportOpen] = useState(false);
 
   const fetchStats = async () => {
-    setLoading(true);
     try {
       const res = await api.get('/analytics/admin');
       if (res.data.success) {
         setData(res.data);
+        sessionStorage.setItem('crm_admin_dash_cache', JSON.stringify(res.data));
       }
     } catch (error) {
       console.error('Failed to load admin stats:', error);

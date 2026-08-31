@@ -164,7 +164,12 @@ const customerSchema = new mongoose.Schema(
   }
 );
 
-// Compound index to help search queries
+// Compound indexes for ultra-fast query execution
+customerSchema.index({ createdByEmployeeId: 1, createdAt: -1 });
+customerSchema.index({ followUpDate: 1, followUpStatus: 1 });
+customerSchema.index({ companyName: 1, followUpStatus: 1 });
+customerSchema.index({ priority: 1, createdAt: -1 });
+customerSchema.index({ date: -1 });
 customerSchema.index({ customerName: 'text', companyName: 'text', mobileNumber: 'text', location: 'text', city: 'text' });
 
 module.exports = mongoose.model('Customer', customerSchema);
