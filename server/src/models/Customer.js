@@ -114,7 +114,7 @@ const customerSchema = new mongoose.Schema(
     },
     followUpDate: {
       type: Date,
-      required: [true, 'Follow-up date is required'],
+      default: null,
     },
     followUpTime: {
       type: String,

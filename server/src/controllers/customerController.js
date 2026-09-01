@@ -343,15 +343,15 @@ exports.createCustomer = async (req, res) => {
       mobileNumber: mobileNumber.trim(),
       altMobileNumber: altMobileNumber || '',
       email: email || '',
-      location,
+      location: location || '',
       fullAddress: fullAddress || '',
-      city,
-      state,
+      city: city || '',
+      state: state || '',
       productInterested,
       leadSource: leadSource || 'Website',
       priority: priority || 'Warm',
       customerRequirement: customerRequirement || '',
-      followUpDate,
+      followUpDate: followUpDate ? new Date(followUpDate) : null,
       followUpTime: followUpTime || '11:00 AM',
       followUpStatus: followUpStatus || 'New Lead',
       remarks: remarks || '',
@@ -466,8 +466,12 @@ exports.updateCustomer = async (req, res) => {
     if (priority && priority !== customer.priority) {
       changes.push(`Priority changed from "${customer.priority}" to "${priority}"`);
     }
-    if (followUpDate && new Date(followUpDate).toISOString() !== new Date(customer.followUpDate).toISOString()) {
-      changes.push(`Follow-up rescheduled to ${new Date(followUpDate).toLocaleDateString()} ${followUpTime || customer.followUpTime}`);
+    if (followUpDate) {
+      const oldDateIso = customer.followUpDate ? new Date(customer.followUpDate).toISOString() : null;
+      const newDateIso = new Date(followUpDate).toISOString();
+      if (oldDateIso !== newDateIso) {
+        changes.push(`Follow-up rescheduled to ${new Date(followUpDate).toLocaleDateString()} ${followUpTime || customer.followUpTime || ''}`);
+      }
     }
 
     if (date) customer.date = date;
@@ -475,15 +479,15 @@ exports.updateCustomer = async (req, res) => {
     if (companyName) customer.companyName = companyName === 'CleanCruisers' ? 'CleanCruisers' : 'SofaShine';
     if (altMobileNumber !== undefined) customer.altMobileNumber = altMobileNumber;
     if (email !== undefined) customer.email = email;
-    if (location) customer.location = location;
+    if (location !== undefined) customer.location = location;
     if (fullAddress !== undefined) customer.fullAddress = fullAddress;
-    if (city) customer.city = city;
-    if (state) customer.state = state;
+    if (city !== undefined) customer.city = city;
+    if (state !== undefined) customer.state = state;
     if (productInterested) customer.productInterested = productInterested;
     if (leadSource) customer.leadSource = leadSource;
     if (priority) customer.priority = priority;
     if (customerRequirement !== undefined) customer.customerRequirement = customerRequirement;
-    if (followUpDate) customer.followUpDate = followUpDate;
+    if (followUpDate !== undefined) customer.followUpDate = followUpDate ? new Date(followUpDate) : null;
     if (followUpTime) customer.followUpTime = followUpTime;
     if (followUpStatus) customer.followUpStatus = followUpStatus;
     if (remarks !== undefined) customer.remarks = remarks;
