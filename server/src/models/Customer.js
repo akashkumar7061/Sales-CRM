@@ -62,8 +62,8 @@ const customerSchema = new mongoose.Schema(
     },
     location: {
       type: String,
-      required: [true, 'Location is required'],
       trim: true,
+      default: '',
     },
     fullAddress: {
       type: String,
@@ -72,13 +72,13 @@ const customerSchema = new mongoose.Schema(
     },
     city: {
       type: String,
-      required: [true, 'City is required'],
       trim: true,
+      default: '',
     },
     state: {
       type: String,
-      required: [true, 'State is required'],
       trim: true,
+      default: '',
     },
     productInterested: {
       type: String,
