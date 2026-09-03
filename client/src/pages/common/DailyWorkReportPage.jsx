@@ -87,15 +87,15 @@ export const DailyWorkReportPage = () => {
         attendanceStatus,
         clockInTime,
         clockOutTime,
-        customersContacted: customersContacted ? Number(customersContacted) : undefined,
-        followupsCompleted: followupsCompleted ? Number(followupsCompleted) : undefined,
-        newLeadsAdded: newLeadsAdded ? Number(newLeadsAdded) : undefined,
-        dealsConverted: dealsConverted ? Number(dealsConverted) : undefined,
-        remarks,
+        customersContacted: customersContacted !== '' ? Number(customersContacted) : undefined,
+        followupsCompleted: followupsCompleted !== '' ? Number(followupsCompleted) : undefined,
+        newLeadsAdded: newLeadsAdded !== '' ? Number(newLeadsAdded) : undefined,
+        dealsConverted: dealsConverted !== '' ? Number(dealsConverted) : undefined,
+        remarks: remarks.trim(),
       });
 
       if (res.data.success) {
-        toast.success('Daily report submitted successfully!');
+        toast.success(res.data.message || 'Daily report submitted successfully!');
         setRemarks('');
         fetchReports();
       }
