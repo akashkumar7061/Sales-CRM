@@ -235,3 +235,40 @@ exports.getAllDailyReports = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to fetch team daily reports.', error: error.message });
   }
 };
+
+// @desc    Delete a daily work report
+// @route   DELETE /api/reports/:id
+// @access  Private (Admin only)
+exports.deleteDailyReport = async (req, res) => {
+  try {
+    const report = await DailyReport.findById(req.params.id);
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'Daily work report not found.' });
+    }
+
+    await DailyReport.findByIdAndDelete(req.params.id);
+
+    // Log Activity
+    try {
+      await ActivityLog.create({
+        userId: req.user._id,
+        userName: req.user.name,
+        userRole: req.user.role,
+        action: 'DELETE_DAILY_REPORT',
+        targetId: req.params.id,
+        targetModel: 'DailyReport',
+        details: `Deleted daily work report of ${report.employeeName} for date ${new Date(report.date).toLocaleDateString()}.`,
+      });
+    } catch (actErr) {
+      console.warn('Activity log error:', actErr);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Daily work report deleted successfully.',
+    });
+  } catch (error) {
+    console.error('Delete Daily Report Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete daily report.', error: error.message });
+  }
+};

@@ -11,9 +11,11 @@ import {
   Users,
   Building,
   Filter,
+  Trash2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { DateRangePicker } from '../../components/common/DateRangePicker';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 export const DailyWorkReportPage = () => {
   const { user, isAdmin } = useAuth();
@@ -39,6 +41,10 @@ export const DailyWorkReportPage = () => {
   const [endDate, setEndDate] = useState('');
   const [filterEmployee, setFilterEmployee] = useState('all');
   const [employees, setEmployees] = useState([]);
+
+  // Delete Modal State (Admin)
+  const [reportToDelete, setReportToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Load employee list for Admin filter
   useEffect(() => {
@@ -103,6 +109,23 @@ export const DailyWorkReportPage = () => {
       toast.error(err.response?.data?.message || 'Failed to submit report.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteReport = async () => {
+    if (!reportToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await api.delete(`/reports/${reportToDelete._id}`);
+      if (res.data.success) {
+        toast.success(res.data.message || 'Daily report deleted successfully.');
+        setReportToDelete(null);
+        fetchReports();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete report.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -337,18 +360,19 @@ export const DailyWorkReportPage = () => {
                 <th className="px-4 py-3">Leads Added</th>
                 <th className="px-4 py-3">Conversions</th>
                 <th className="px-4 py-3">Remarks</th>
+                {isAdmin && <th className="px-4 py-3 text-right">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
               {loading ? (
                 <tr>
-                  <td colSpan={isAdmin ? 9 : 8} className="py-12 text-center">
+                  <td colSpan={isAdmin ? 10 : 9} className="py-12 text-center">
                     <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent mx-auto" />
                   </td>
                 </tr>
               ) : reports.length === 0 ? (
                 <tr>
-                  <td colSpan={isAdmin ? 9 : 8} className="py-12 text-center text-slate-400">
+                  <td colSpan={isAdmin ? 10 : 9} className="py-12 text-center text-slate-400">
                     No daily reports found for this selection.
                   </td>
                 </tr>
@@ -392,6 +416,18 @@ export const DailyWorkReportPage = () => {
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-400 max-w-[220px] truncate">
                       {r.remarks || '-'}
                     </td>
+                    {isAdmin && (
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => setReportToDelete(r)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                          title="Delete Daily Report"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}
@@ -399,6 +435,17 @@ export const DailyWorkReportPage = () => {
           </table>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!reportToDelete}
+        onClose={() => setReportToDelete(null)}
+        onConfirm={handleDeleteReport}
+        title="Delete Daily Work Report"
+        message={`Are you sure you want to delete the daily work report for "${reportToDelete?.employeeName}" on ${reportToDelete?.date ? new Date(reportToDelete.date).toLocaleDateString() : 'this date'}?`}
+        confirmText={isDeleting ? 'Deleting...' : 'Delete Report'}
+        type="danger"
+      />
     </div>
   );
 };
