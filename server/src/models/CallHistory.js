@@ -68,6 +68,31 @@ const callHistorySchema = new mongoose.Schema(
     newFollowUpTime: {
       type: String,
     },
+    recordingUrl: {
+      type: String,
+      default: '',
+    },
+    recordingFileName: {
+      type: String,
+      default: '',
+    },
+    recordingFileSize: {
+      type: Number,
+      default: 0,
+    },
+    recordingMimeType: {
+      type: String,
+      default: '',
+    },
+    recordingDuration: {
+      type: String,
+      default: '',
+    },
+    hasRecording: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,
@@ -75,5 +100,7 @@ const callHistorySchema = new mongoose.Schema(
 );
 
 callHistorySchema.index({ customerId: 1, createdAt: -1 });
+callHistorySchema.index({ hasRecording: 1, createdAt: -1 });
+callHistorySchema.index({ userId: 1, hasRecording: 1, createdAt: -1 });
 
 module.exports = mongoose.model('CallHistory', callHistorySchema);

@@ -14,6 +14,7 @@ import {
   Building2,
   TrendingUp,
   FileText,
+  Mic,
 } from 'lucide-react';
 
 export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
@@ -34,6 +35,11 @@ export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
       name: 'Employee Management',
       path: '/admin/employees',
       icon: UserCheck,
+    },
+    {
+      name: 'Call Recordings Hub',
+      path: '/admin/recordings',
+      icon: Mic,
     },
     {
       name: 'Sales Targets',
@@ -67,6 +73,11 @@ export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
       name: 'My Dashboard',
       path: '/employee/dashboard',
       icon: TrendingUp,
+    },
+    {
+      name: 'Call Recordings',
+      path: '/employee/recordings',
+      icon: Mic,
     },
     {
       name: 'Daily Work Report',

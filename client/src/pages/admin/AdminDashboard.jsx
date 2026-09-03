@@ -28,6 +28,7 @@ import {
   Flame,
   Target,
   KeyRound,
+  Mic,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -131,6 +132,14 @@ export const AdminDashboard = () => {
           >
             <Users className="h-3.5 w-3.5" />
             <span>Team List</span>
+          </Link>
+
+          <Link
+            to="/admin/recordings"
+            className="flex items-center gap-1.5 rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-950/40 px-3.5 py-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 transition-colors shadow-xs"
+          >
+            <Mic className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+            <span>Call Recordings</span>
           </Link>
 
           <button

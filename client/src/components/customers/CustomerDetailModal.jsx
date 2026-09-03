@@ -5,6 +5,7 @@ import { CustomerTimelineTab } from './CustomerTimelineTab';
 import { CustomerDocumentSection } from './CustomerDocumentSection';
 import { CallLogModal } from './CallLogModal';
 import { WhatsAppModal } from '../common/WhatsAppModal';
+import { AudioPlayer } from '../common/AudioPlayer';
 import api from '../../api/axios';
 import {
   User,
@@ -388,6 +389,15 @@ export const CustomerDetailModal = ({ isOpen, onClose, customer: initialCustomer
                       <p className="text-xs text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
                         {call.remarks}
                       </p>
+
+                      {call.recordingUrl && (
+                        <div className="pt-1">
+                          <AudioPlayer
+                            src={call.recordingUrl}
+                            fileName={call.recordingFileName || 'Call_Recording.mp3'}
+                          />
+                        </div>
+                      )}
 
                       {call.nextAction && (
                         <p className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import api from '../../api/axios';
-import { PhoneCall, X, Calendar, Clock, CheckCircle2, FileText, ArrowRight } from 'lucide-react';
+import { PhoneCall, X, Calendar, Clock, CheckCircle2, FileText, ArrowRight, Mic, UploadCloud, Music, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const CallLogModal = ({ isOpen, onClose, customer, onCallLogged }) => {
@@ -14,7 +14,32 @@ export const CallLogModal = ({ isOpen, onClose, customer, onCallLogged }) => {
     customer.followUpDate ? new Date(customer.followUpDate).toISOString().split('T')[0] : ''
   );
   const [newFollowUpTime, setNewFollowUpTime] = useState(customer.followUpTime || '11:00 AM');
+  
+  // Audio Recording State
+  const [audioFile, setAudioFile] = useState(null);
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState('');
+  const fileInputRef = useRef(null);
+
   const [submitting, setSubmitting] = useState(false);
+
+  const handleAudioChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error('Audio file size must be less than 50MB.');
+        return;
+      }
+      setAudioFile(file);
+      setAudioPreviewUrl(URL.createObjectURL(file));
+      toast.success(`Audio attached: ${file.name}`);
+    }
+  };
+
+  const handleRemoveAudio = () => {
+    setAudioFile(null);
+    setAudioPreviewUrl('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,18 +50,26 @@ export const CallLogModal = ({ isOpen, onClose, customer, onCallLogged }) => {
 
     setSubmitting(true);
     try {
-      const res = await api.post(`/calls/${customer._id}`, {
-        callResult,
-        remarks: remarks.trim(),
-        nextAction: nextAction.trim(),
-        newStatus,
-        newFollowUpDate: newFollowUpDate || undefined,
-        newFollowUpTime,
+      const formData = new FormData();
+      formData.append('callResult', callResult);
+      formData.append('remarks', remarks.trim());
+      formData.append('nextAction', nextAction.trim());
+      formData.append('newStatus', newStatus);
+      if (newFollowUpDate) formData.append('newFollowUpDate', newFollowUpDate);
+      if (newFollowUpTime) formData.append('newFollowUpTime', newFollowUpTime);
+
+      if (audioFile) {
+        formData.append('audio', audioFile);
+      }
+
+      const res = await api.post(`/calls/${customer._id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       if (res.data.success) {
-        toast.success('Call interaction logged successfully!');
+        toast.success(audioFile ? 'Call log & audio recording uploaded!' : 'Call interaction logged successfully!');
         if (onCallLogged) onCallLogged(res.data.customer);
+        handleRemoveAudio();
         onClose();
       }
     } catch (err) {
@@ -67,9 +100,9 @@ export const CallLogModal = ({ isOpen, onClose, customer, onCallLogged }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
-      <div className="relative w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-fade-in">
+      <div className="relative w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-fade-in max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-6 py-4 bg-blue-500/10 dark:bg-blue-950/20">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-6 py-4 bg-blue-500/10 dark:bg-blue-950/20 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-600/20">
               <PhoneCall className="h-5 w-5" />
@@ -84,15 +117,18 @@ export const CallLogModal = ({ isOpen, onClose, customer, onCallLogged }) => {
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => {
+              handleRemoveAudio();
+              onClose();
+            }}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        {/* Form Body with Scroll */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
           {/* Call Result Selector */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
@@ -129,6 +165,58 @@ export const CallLogModal = ({ isOpen, onClose, customer, onCallLogged }) => {
               placeholder="What did the customer say? Discussed pricing, requirements, or objections..."
               className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none"
             />
+          </div>
+
+          {/* Audio Call Recording Upload Box */}
+          <div className="rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 p-3.5 border border-indigo-200 dark:border-indigo-500/30 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-1.5">
+                <Mic className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                <span>Attach Call Audio Recording (Optional)</span>
+              </label>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                MP3, WAV, M4A, OGG, AAC (Max 50MB)
+              </span>
+            </div>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.webm,.amr,.3gp"
+              onChange={handleAudioChange}
+              className="hidden"
+            />
+
+            {!audioFile ? (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-500/40 bg-white/70 dark:bg-slate-900/60 p-3 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100/50 dark:hover:bg-indigo-900/40 transition-all cursor-pointer"
+              >
+                <UploadCloud className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                <span>Click to Browse & Upload Audio Recording</span>
+              </button>
+            ) : (
+              <div className="space-y-2 rounded-xl bg-white dark:bg-slate-900 p-3 border border-indigo-200 dark:border-indigo-500/30">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 truncate">
+                    <Music className="h-4 w-4 text-indigo-600 shrink-0" />
+                    <span className="truncate">{audioFile.name}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleRemoveAudio}
+                    className="text-rose-500 hover:text-rose-600 p-1 transition-colors"
+                    title="Remove audio"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+                {audioPreviewUrl && (
+                  <audio controls src={audioPreviewUrl} className="w-full h-8 mt-1" />
+                )}
+              </div>
+            )}
           </div>
 
           {/* Next Action */}
@@ -172,7 +260,7 @@ export const CallLogModal = ({ isOpen, onClose, customer, onCallLogged }) => {
 
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Next Follow-up Date
+                  Next Follow-up Date (Optional)
                 </label>
                 <input
                   type="date"
@@ -201,7 +289,10 @@ export const CallLogModal = ({ isOpen, onClose, customer, onCallLogged }) => {
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => {
+                handleRemoveAudio();
+                onClose();
+              }}
               className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
               Cancel
@@ -209,10 +300,10 @@ export const CallLogModal = ({ isOpen, onClose, customer, onCallLogged }) => {
             <button
               type="submit"
               disabled={submitting}
-              className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 px-5 py-2 text-xs font-bold text-white shadow-lg shadow-blue-600/30 active:scale-95 transition-all"
+              className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-600/30 active:scale-95 transition-all disabled:bg-blue-800"
             >
               <PhoneCall className="h-4 w-4" />
-              <span>{submitting ? 'Saving...' : 'Save Call Log'}</span>
+              <span>{submitting ? 'Uploading...' : audioFile ? 'Save Call & Upload Recording' : 'Save Call Log'}</span>
             </button>
           </div>
         </form>

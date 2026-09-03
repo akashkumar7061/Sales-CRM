@@ -27,6 +27,9 @@ const EmployeeManagement = lazy(() =>
 const TargetManagementPage = lazy(() =>
   import('./pages/admin/TargetManagementPage').then((m) => ({ default: m.TargetManagementPage }))
 );
+const CallRecordingsPage = lazy(() =>
+  import('./pages/admin/CallRecordingsPage').then((m) => ({ default: m.CallRecordingsPage }))
+);
 
 // Employee Pages (Lazy Loaded)
 const EmployeeCustomers = lazy(() =>
@@ -34,6 +37,9 @@ const EmployeeCustomers = lazy(() =>
 );
 const EmployeeDashboard = lazy(() =>
   import('./pages/employee/EmployeeDashboard').then((m) => ({ default: m.EmployeeDashboard }))
+);
+const EmployeeRecordingsPage = lazy(() =>
+  import('./pages/employee/EmployeeRecordingsPage').then((m) => ({ default: m.EmployeeRecordingsPage }))
 );
 
 // Common Pages (Lazy Loaded)
@@ -118,6 +124,7 @@ function App() {
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="customers" element={<AdminCustomers />} />
                 <Route path="employees" element={<EmployeeManagement />} />
+                <Route path="recordings" element={<CallRecordingsPage />} />
                 <Route path="targets" element={<TargetManagementPage />} />
                 <Route path="reports" element={<DailyWorkReportPage />} />
                 <Route path="export-center" element={<DataBackupCenterPage />} />
@@ -136,6 +143,7 @@ function App() {
                 <Route index element={<Navigate to="/employee/customers" replace />} />
                 <Route path="customers" element={<EmployeeCustomers />} />
                 <Route path="dashboard" element={<EmployeeDashboard />} />
+                <Route path="recordings" element={<EmployeeRecordingsPage />} />
                 <Route path="reports" element={<DailyWorkReportPage />} />
                 <Route path="logs" element={<ActivityLogsPage />} />
               </Route>
