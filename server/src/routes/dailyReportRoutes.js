@@ -6,6 +6,7 @@ const {
   getMyDailyReports,
   getAllDailyReports,
   deleteDailyReport,
+  updateDailyReport,
 } = require('../controllers/dailyReportController');
 
 router.use(protect);
@@ -13,6 +14,8 @@ router.use(protect);
 router.post('/submit', submitDailyReport);
 router.get('/my-reports', getMyDailyReports);
 router.get('/all', adminOnly, getAllDailyReports);
-router.delete('/:id', adminOnly, deleteDailyReport);
+router.route('/:id')
+  .put(adminOnly, updateDailyReport)
+  .delete(adminOnly, deleteDailyReport);
 
 module.exports = router;

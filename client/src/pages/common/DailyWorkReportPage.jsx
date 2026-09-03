@@ -12,10 +12,13 @@ import {
   Building,
   Filter,
   Trash2,
+  Edit2,
+  Save,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { DateRangePicker } from '../../components/common/DateRangePicker';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { Modal } from '../../components/common/Modal';
 
 export const DailyWorkReportPage = () => {
   const { user, isAdmin } = useAuth();
@@ -45,6 +48,21 @@ export const DailyWorkReportPage = () => {
   // Delete Modal State (Admin)
   const [reportToDelete, setReportToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Edit Modal State (Admin)
+  const [reportToEdit, setReportToEdit] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    date: '',
+    attendanceStatus: 'Present',
+    clockInTime: '',
+    clockOutTime: '',
+    customersContacted: 0,
+    followupsCompleted: 0,
+    newLeadsAdded: 0,
+    dealsConverted: 0,
+    remarks: '',
+  });
+  const [updating, setUpdating] = useState(false);
 
   // Load employee list for Admin filter
   useEffect(() => {
@@ -129,6 +147,50 @@ export const DailyWorkReportPage = () => {
     }
   };
 
+  const openEditModal = (report) => {
+    setReportToEdit(report);
+    setEditFormData({
+      date: report.date ? new Date(report.date).toISOString().split('T')[0] : '',
+      attendanceStatus: report.attendanceStatus || 'Present',
+      clockInTime: report.clockInTime || '',
+      clockOutTime: report.clockOutTime || '',
+      customersContacted: report.customersContacted !== undefined ? report.customersContacted : 0,
+      followupsCompleted: report.followupsCompleted !== undefined ? report.followupsCompleted : 0,
+      newLeadsAdded: report.newLeadsAdded !== undefined ? report.newLeadsAdded : 0,
+      dealsConverted: report.dealsConverted !== undefined ? report.dealsConverted : 0,
+      remarks: report.remarks || '',
+    });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!reportToEdit) return;
+    setUpdating(true);
+    try {
+      const res = await api.put(`/reports/${reportToEdit._id}`, {
+        date: editFormData.date,
+        attendanceStatus: editFormData.attendanceStatus,
+        clockInTime: editFormData.clockInTime,
+        clockOutTime: editFormData.clockOutTime,
+        customersContacted: Number(editFormData.customersContacted),
+        followupsCompleted: Number(editFormData.followupsCompleted),
+        newLeadsAdded: Number(editFormData.newLeadsAdded),
+        dealsConverted: Number(editFormData.dealsConverted),
+        remarks: editFormData.remarks.trim(),
+      });
+
+      if (res.data.success) {
+        toast.success(res.data.message || 'Daily report updated successfully.');
+        setReportToEdit(null);
+        fetchReports();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update report.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const attendanceOptions = ['Present', 'Half Day', 'Leave', 'Work From Home'];
 
   return (
@@ -142,7 +204,7 @@ export const DailyWorkReportPage = () => {
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             {isAdmin
-              ? 'Review daily login times, attendance records, and submitted work summaries for all sales reps.'
+              ? 'Review daily login times, attendance records, and edit or manage submitted work summaries for all sales reps.'
               : 'Clock in your daily attendance and submit your end-of-day sales accomplishments.'}
           </p>
         </div>
@@ -418,14 +480,24 @@ export const DailyWorkReportPage = () => {
                     </td>
                     {isAdmin && (
                       <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => setReportToDelete(r)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-                          title="Delete Daily Report"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(r)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors"
+                            title="Edit Daily Report"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setReportToDelete(r)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                            title="Delete Daily Report"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -435,6 +507,156 @@ export const DailyWorkReportPage = () => {
           </table>
         </div>
       </div>
+
+      {/* Edit Daily Report Modal (Admin) */}
+      <Modal
+        isOpen={!!reportToEdit}
+        onClose={() => setReportToEdit(null)}
+        title={`Edit Daily Report: ${reportToEdit?.employeeName || 'Employee'}`}
+        maxWidth="max-w-lg"
+      >
+        <form onSubmit={handleEditSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Report Date
+              </label>
+              <input
+                type="date"
+                required
+                value={editFormData.date}
+                onChange={(e) => setEditFormData({ ...editFormData, date: e.target.value })}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-slate-900 dark:text-white focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Attendance Status
+              </label>
+              <select
+                value={editFormData.attendanceStatus}
+                onChange={(e) => setEditFormData({ ...editFormData, attendanceStatus: e.target.value })}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-slate-900 dark:text-white focus:outline-none font-semibold"
+              >
+                {attendanceOptions.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Clock In Time
+              </label>
+              <input
+                type="text"
+                value={editFormData.clockInTime}
+                onChange={(e) => setEditFormData({ ...editFormData, clockInTime: e.target.value })}
+                placeholder="09:30 AM"
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-slate-900 dark:text-white focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Clock Out Time
+              </label>
+              <input
+                type="text"
+                value={editFormData.clockOutTime}
+                onChange={(e) => setEditFormData({ ...editFormData, clockOutTime: e.target.value })}
+                placeholder="06:30 PM"
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-slate-900 dark:text-white focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Calls / Contacted
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={editFormData.customersContacted}
+                onChange={(e) => setEditFormData({ ...editFormData, customersContacted: e.target.value })}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-slate-900 dark:text-white focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Follow-ups Completed
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={editFormData.followupsCompleted}
+                onChange={(e) => setEditFormData({ ...editFormData, followupsCompleted: e.target.value })}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-slate-900 dark:text-white focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                New Leads Added
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={editFormData.newLeadsAdded}
+                onChange={(e) => setEditFormData({ ...editFormData, newLeadsAdded: e.target.value })}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-slate-900 dark:text-white focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Deals Converted
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={editFormData.dealsConverted}
+                onChange={(e) => setEditFormData({ ...editFormData, dealsConverted: e.target.value })}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-slate-900 dark:text-white focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1 text-xs">
+              Summary & Remarks
+            </label>
+            <textarea
+              rows={3}
+              value={editFormData.remarks}
+              onChange={(e) => setEditFormData({ ...editFormData, remarks: e.target.value })}
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 p-2.5 text-xs text-slate-900 dark:text-white focus:outline-none"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setReportToEdit(null)}
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={updating}
+              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2 text-xs font-bold text-white shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 disabled:bg-indigo-800 transition-all"
+            >
+              <Save className="h-4 w-4" />
+              <span>{updating ? 'Updating...' : 'Save Changes'}</span>
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
       <ConfirmModal

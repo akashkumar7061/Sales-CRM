@@ -272,3 +272,71 @@ exports.deleteDailyReport = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to delete daily report.', error: error.message });
   }
 };
+
+// @desc    Update a daily work report
+// @route   PUT /api/reports/:id
+// @access  Private (Admin only)
+exports.updateDailyReport = async (req, res) => {
+  try {
+    const {
+      date,
+      attendanceStatus,
+      clockInTime,
+      clockOutTime,
+      customersContacted,
+      followupsCompleted,
+      newLeadsAdded,
+      dealsConverted,
+      remarks,
+    } = req.body;
+
+    const report = await DailyReport.findById(req.params.id);
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'Daily work report not found.' });
+    }
+
+    if (date) {
+      const parsedDate = new Date(date);
+      parsedDate.setHours(0, 0, 0, 0);
+      report.date = parsedDate;
+    }
+
+    if (attendanceStatus) report.attendanceStatus = attendanceStatus;
+    if (clockInTime !== undefined) report.clockInTime = clockInTime;
+    if (clockOutTime !== undefined) report.clockOutTime = clockOutTime;
+    if (customersContacted !== undefined) report.customersContacted = safeNumber(customersContacted, 0);
+    if (followupsCompleted !== undefined) report.followupsCompleted = safeNumber(followupsCompleted, 0);
+    if (newLeadsAdded !== undefined) report.newLeadsAdded = safeNumber(newLeadsAdded, 0);
+    if (dealsConverted !== undefined) report.dealsConverted = safeNumber(dealsConverted, 0);
+    if (remarks !== undefined) report.remarks = remarks;
+
+    await report.save();
+
+    // Log Activity
+    try {
+      await ActivityLog.create({
+        userId: req.user._id,
+        userName: req.user.name,
+        userRole: req.user.role,
+        action: 'UPDATE_DAILY_REPORT',
+        targetId: report._id,
+        targetModel: 'DailyReport',
+        details: `Updated daily work report of ${report.employeeName} for date ${new Date(report.date).toLocaleDateString()}.`,
+      });
+    } catch (actErr) {
+      console.warn('Activity log error:', actErr);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Daily work report updated successfully.',
+      report,
+    });
+  } catch (error) {
+    console.error('Update Daily Report Error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update daily report.',
+    });
+  }
+};
