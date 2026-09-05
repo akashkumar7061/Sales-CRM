@@ -164,6 +164,10 @@ exports.uploadRecording = async (req, res) => {
   try {
     const {
       customerId,
+      customerName,
+      mobileNumber,
+      companyName,
+      productInterested,
       callDate,
       callTime,
       callResult,
@@ -171,17 +175,47 @@ exports.uploadRecording = async (req, res) => {
       recordingDuration,
     } = req.body;
 
-    if (!customerId) {
-      return res.status(400).json({ success: false, message: 'Customer ID is required.' });
-    }
-
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'Please select an audio file to upload.' });
     }
 
-    const customer = await Customer.findById(customerId);
-    if (!customer) {
-      return res.status(404).json({ success: false, message: 'Customer record not found.' });
+    let customer = null;
+
+    if (customerId) {
+      customer = await Customer.findById(customerId);
+      if (!customer) {
+        return res.status(404).json({ success: false, message: 'Selected customer record not found.' });
+      }
+    } else if (mobileNumber && mobileNumber.trim()) {
+      customer = await Customer.findOne({ mobileNumber: mobileNumber.trim() });
+      if (!customer) {
+        // Auto-create customer lead
+        customer = await Customer.create({
+          customerName: customerName ? customerName.trim() : 'Phone Call Lead',
+          mobileNumber: mobileNumber.trim(),
+          companyName: companyName === 'CleanCruisers' ? 'CleanCruisers' : 'SofaShine',
+          productInterested: productInterested || 'General Inquiry',
+          salesEmployeeName: req.user.name,
+          createdByEmployeeId: req.user._id,
+          lastUpdatedBy: req.user._id,
+          followUpStatus: 'Contacted',
+          remarks: remarks || '',
+          timeline: [
+            {
+              action: 'CREATED',
+              description: `Customer lead created via direct Call Recording upload by ${req.user.name}`,
+              performedBy: req.user._id,
+              performerName: req.user.name,
+              timestamp: new Date(),
+            },
+          ],
+        });
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Please select an existing customer or enter Customer Name and Mobile Number.',
+      });
     }
 
     if (req.user.role === 'employee' && customer.createdByEmployeeId.toString() !== req.user._id.toString()) {

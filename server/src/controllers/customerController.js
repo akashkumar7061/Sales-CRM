@@ -1,5 +1,6 @@
 const Customer = require('../models/Customer');
 const User = require('../models/User');
+const CallHistory = require('../models/CallHistory');
 const Notification = require('../models/Notification');
 const { createLog } = require('../utils/logger');
 const fs = require('fs');
@@ -362,6 +363,41 @@ exports.createCustomer = async (req, res) => {
       documents: [],
     });
 
+    // If audio call recording file was attached during customer creation
+    if (req.file) {
+      const recordingUrl = `/uploads/recordings/${req.file.filename}`;
+      await CallHistory.create({
+        customerId: customer._id,
+        userId: req.user._id,
+        salesEmployeeName,
+        customerName: customer.customerName,
+        mobileNumber: customer.mobileNumber,
+        companyName: customer.companyName,
+        callResult: 'Connected',
+        remarks: remarks || `Call recording attached during customer registration`,
+        recordingUrl,
+        recordingFileName: req.file.originalname,
+        recordingFileSize: req.file.size,
+        recordingMimeType: req.file.mimetype,
+        hasRecording: true,
+        callDate: new Date(),
+        callTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      });
+
+      customer.timeline.push({
+        action: 'CALL_RECORDED',
+        description: `Customer call voice recording attached (${req.file.originalname})`,
+        performedBy: req.user._id,
+        performerName: req.user.name,
+        timestamp: new Date(),
+        metadata: {
+          recordingUrl,
+          callResult: 'Connected',
+        },
+      });
+      await customer.save();
+    }
+
     // If assigned to another employee by admin, send notification
     if (req.user.role === 'admin' && createdByEmployeeId.toString() !== req.user._id.toString()) {
       await Notification.create({
@@ -378,13 +414,13 @@ exports.createCustomer = async (req, res) => {
     await createLog({
       user: req.user,
       action: 'CREATE_CUSTOMER',
-      details: `Created customer ${customer.customerName} [${customer.companyName}] (${customer.mobileNumber}) assigned to ${salesEmployeeName}.`,
+      details: `Created customer ${customer.customerName} [${customer.companyName}] (${customer.mobileNumber}) assigned to ${salesEmployeeName}.${req.file ? ' (with Call Recording attached)' : ''}`,
       metadata: { customerId: customer._id },
     });
 
     res.status(201).json({
       success: true,
-      message: 'Customer saved successfully!',
+      message: req.file ? 'Customer saved and call recording uploaded successfully!' : 'Customer saved successfully!',
       customer,
     });
   } catch (error) {
@@ -530,6 +566,40 @@ exports.updateCustomer = async (req, res) => {
       });
     }
 
+    // If audio call recording file was attached during customer update
+    if (req.file) {
+      const recordingUrl = `/uploads/recordings/${req.file.filename}`;
+      await CallHistory.create({
+        customerId: customer._id,
+        userId: req.user._id,
+        salesEmployeeName: customer.salesEmployeeName,
+        customerName: customer.customerName,
+        mobileNumber: customer.mobileNumber,
+        companyName: customer.companyName,
+        callResult: 'Connected',
+        remarks: remarks || `Call recording uploaded during customer profile update`,
+        recordingUrl,
+        recordingFileName: req.file.originalname,
+        recordingFileSize: req.file.size,
+        recordingMimeType: req.file.mimetype,
+        hasRecording: true,
+        callDate: new Date(),
+        callTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      });
+
+      customer.timeline.push({
+        action: 'CALL_RECORDED',
+        description: `Customer call voice recording attached (${req.file.originalname})`,
+        performedBy: req.user._id,
+        performerName: req.user.name,
+        timestamp: new Date(),
+        metadata: {
+          recordingUrl,
+          callResult: 'Connected',
+        },
+      });
+    }
+
     customer.lastUpdatedBy = req.user._id;
     await customer.save();
 
@@ -537,13 +607,13 @@ exports.updateCustomer = async (req, res) => {
     await createLog({
       user: req.user,
       action: 'UPDATE_CUSTOMER',
-      details: `Updated customer ${customer.customerName} (${customer.mobileNumber}). Changes: ${changes.join(', ') || 'Details modified'}`,
+      details: `Updated customer ${customer.customerName} (${customer.mobileNumber}). Changes: ${changes.join(', ') || 'Details modified'}${req.file ? ' (with Call Recording attached)' : ''}`,
       metadata: { customerId: customer._id },
     });
 
     res.status(200).json({
       success: true,
-      message: 'Customer details updated successfully!',
+      message: req.file ? 'Customer updated and call recording uploaded successfully!' : 'Customer details updated successfully!',
       customer,
     });
   } catch (error) {
