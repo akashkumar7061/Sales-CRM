@@ -35,18 +35,6 @@ exports.logCall = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Customer record not found.' });
     }
 
-    // Role check: Employee can only log calls for their assigned leads
-    if (
-      req.user.role === 'employee' &&
-      customer.createdByEmployeeId &&
-      customer.createdByEmployeeId.toString() !== req.user._id.toString()
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied: You can only record calls for your own customer leads.',
-      });
-    }
-
     // Recording audio data if attached
     let recordingUrl = '';
     let recordingFileName = '';
@@ -232,17 +220,6 @@ exports.uploadRecording = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Please select an existing customer or enter Customer Name and Mobile Number.',
-      });
-    }
-
-    if (
-      req.user.role === 'employee' &&
-      customer.createdByEmployeeId &&
-      customer.createdByEmployeeId.toString() !== req.user._id.toString()
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied: You can only upload recordings for your own customers.',
       });
     }
 

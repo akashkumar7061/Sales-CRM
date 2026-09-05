@@ -197,17 +197,6 @@ exports.getCustomerById = async (req, res) => {
       });
     }
 
-    // Role check: Employee can only view their own
-    if (
-      req.user.role !== 'admin' &&
-      customer.createdByEmployeeId._id.toString() !== req.user._id.toString()
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied: You can only view customers created by you.',
-      });
-    }
-
     res.status(200).json({
       success: true,
       customer,
