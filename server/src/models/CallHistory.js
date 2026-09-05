@@ -11,10 +11,16 @@ const callHistorySchema = new mongoose.Schema(
     customerName: {
       type: String,
       required: true,
+      default: 'Customer',
     },
     mobileNumber: {
       type: String,
       required: true,
+      default: '',
+    },
+    companyName: {
+      type: String,
+      default: 'SofaShine',
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -25,11 +31,11 @@ const callHistorySchema = new mongoose.Schema(
     salesEmployeeName: {
       type: String,
       required: true,
+      default: 'Sales Executive',
     },
     callDate: {
       type: Date,
       default: Date.now,
-      required: true,
     },
     callTime: {
       type: String,
@@ -37,15 +43,6 @@ const callHistorySchema = new mongoose.Schema(
     },
     callResult: {
       type: String,
-      required: [true, 'Call result is required'],
-      enum: [
-        'Connected',
-        'Busy',
-        'No Answer',
-        'Wrong Number',
-        'Voicemail',
-        'Call Back Later',
-      ],
       default: 'Connected',
     },
     nextAction: {
@@ -56,7 +53,7 @@ const callHistorySchema = new mongoose.Schema(
     remarks: {
       type: String,
       trim: true,
-      required: [true, 'Call notes / remarks are required'],
+      default: 'Customer call discussion recorded',
     },
     newStatus: {
       type: String,
@@ -67,6 +64,7 @@ const callHistorySchema = new mongoose.Schema(
     },
     newFollowUpTime: {
       type: String,
+      default: '',
     },
     recordingUrl: {
       type: String,

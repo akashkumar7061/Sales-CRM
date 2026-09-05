@@ -337,8 +337,11 @@ exports.createCustomer = async (req, res) => {
       },
     ];
 
+    const safeDate = (date && !isNaN(new Date(date).getTime())) ? new Date(date) : new Date();
+    const safeFollowUpDate = (followUpDate && !isNaN(new Date(followUpDate).getTime())) ? new Date(followUpDate) : null;
+
     const customer = await Customer.create({
-      date: date || new Date(),
+      date: safeDate,
       customerName,
       companyName: companyName === 'CleanCruisers' ? 'CleanCruisers' : 'SofaShine',
       mobileNumber: mobileNumber.trim(),
@@ -348,11 +351,11 @@ exports.createCustomer = async (req, res) => {
       fullAddress: fullAddress || '',
       city: city || '',
       state: state || '',
-      productInterested,
+      productInterested: productInterested || 'General Inquiry',
       leadSource: leadSource || 'Website',
       priority: priority || 'Warm',
       customerRequirement: customerRequirement || '',
-      followUpDate: followUpDate ? new Date(followUpDate) : null,
+      followUpDate: safeFollowUpDate,
       followUpTime: followUpTime || '11:00 AM',
       followUpStatus: followUpStatus || 'New Lead',
       remarks: remarks || '',
@@ -449,7 +452,7 @@ exports.updateCustomer = async (req, res) => {
     const isAdmin = req.user.role === 'admin';
 
     // Verify ownership if not admin
-    if (!isAdmin && customer.createdByEmployeeId.toString() !== req.user._id.toString()) {
+    if (!isAdmin && customer.createdByEmployeeId && customer.createdByEmployeeId.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
         message: 'Access denied: You can only edit customer records created by you.',

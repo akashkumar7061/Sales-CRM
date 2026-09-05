@@ -5,6 +5,13 @@ const Notification = require('../models/Notification');
 const fs = require('fs');
 const path = require('path');
 
+// Safe date parser helper
+const parseSafeDate = (d, fallback = null) => {
+  if (!d) return fallback;
+  const parsed = new Date(d);
+  return isNaN(parsed.getTime()) ? fallback : parsed;
+};
+
 // @desc    Log a phone call interaction for a customer (with optional audio recording)
 // @route   POST /api/calls/:customerId
 // @access  Private (Assigned Employee or Admin)
@@ -29,17 +36,14 @@ exports.logCall = async (req, res) => {
     }
 
     // Role check: Employee can only log calls for their assigned leads
-    if (req.user.role === 'employee' && customer.createdByEmployeeId.toString() !== req.user._id.toString()) {
+    if (
+      req.user.role === 'employee' &&
+      customer.createdByEmployeeId &&
+      customer.createdByEmployeeId.toString() !== req.user._id.toString()
+    ) {
       return res.status(403).json({
         success: false,
         message: 'Access denied: You can only record calls for your own customer leads.',
-      });
-    }
-
-    if (!remarks || !callResult) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide call result and notes/remarks.',
       });
     }
 
@@ -58,20 +62,24 @@ exports.logCall = async (req, res) => {
       hasRecording = true;
     }
 
+    const safeCallDate = parseSafeDate(callDate, new Date());
+    const safeFollowUpDate = parseSafeDate(newFollowUpDate, customer.followUpDate);
+
     // Create call record
     const callLog = await CallHistory.create({
       customerId: customer._id,
-      customerName: customer.customerName,
-      mobileNumber: customer.mobileNumber,
+      customerName: customer.customerName || 'Customer',
+      mobileNumber: customer.mobileNumber || '',
+      companyName: customer.companyName || 'SofaShine',
       userId: req.user._id,
-      salesEmployeeName: req.user.name,
-      callDate: callDate || new Date(),
+      salesEmployeeName: req.user.name || 'Sales Executive',
+      callDate: safeCallDate,
       callTime: callTime || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      callResult,
+      callResult: callResult || 'Connected',
       nextAction: nextAction || '',
-      remarks,
+      remarks: remarks || 'Call interaction logged',
       newStatus: newStatus || customer.followUpStatus,
-      newFollowUpDate: newFollowUpDate || customer.followUpDate,
+      newFollowUpDate: safeFollowUpDate,
       newFollowUpTime: newFollowUpTime || customer.followUpTime,
       recordingUrl,
       recordingFileName,
@@ -91,21 +99,22 @@ exports.logCall = async (req, res) => {
       statusChanged = true;
     }
 
-    if (newFollowUpDate) {
-      updates.followUpDate = new Date(newFollowUpDate);
+    if (safeFollowUpDate) {
+      updates.followUpDate = safeFollowUpDate;
     }
     if (newFollowUpTime) {
       updates.followUpTime = newFollowUpTime;
     }
 
     // Append to customer timeline
+    if (!customer.timeline) customer.timeline = [];
     const timelineEntry = {
       action: 'CALL_LOGGED',
-      description: `Call recorded (${callResult})${hasRecording ? ' 🎙️ [Audio Attached]' : ''}: ${remarks.substring(0, 100)}${remarks.length > 100 ? '...' : ''}`,
+      description: `Call recorded (${callResult || 'Connected'})${hasRecording ? ' 🎙️ [Audio Attached]' : ''}: ${(remarks || '').substring(0, 100)}`,
       performedBy: req.user._id,
-      performerName: req.user.name,
+      performerName: req.user.name || 'User',
       timestamp: new Date(),
-      metadata: { callResult, nextAction, newStatus, hasRecording, recordingUrl },
+      metadata: { callResult: callResult || 'Connected', nextAction, newStatus, hasRecording, recordingUrl },
     };
 
     customer.timeline.push(timelineEntry);
@@ -115,7 +124,7 @@ exports.logCall = async (req, res) => {
         action: 'STATUS_CHANGE',
         description: `Status updated from "${oldStatus}" to "${newStatus}" after call`,
         performedBy: req.user._id,
-        performerName: req.user.name,
+        performerName: req.user.name || 'User',
         timestamp: new Date(),
       });
     }
@@ -124,25 +133,33 @@ exports.logCall = async (req, res) => {
     await customer.save();
 
     // Log Activity
-    await ActivityLog.create({
-      userId: req.user._id,
-      userName: req.user.name,
-      userRole: req.user.role,
-      action: 'LOG_CALL',
-      targetId: customer._id,
-      targetModel: 'Customer',
-      details: `Logged call with "${customer.customerName}" (${callResult})${hasRecording ? ' with Audio Recording' : ''}. Notes: "${remarks.substring(0, 60)}"`,
-    });
+    try {
+      await ActivityLog.create({
+        userId: req.user._id,
+        userName: req.user.name || 'User',
+        userRole: req.user.role || 'employee',
+        action: 'LOG_CALL',
+        targetId: customer._id,
+        targetModel: 'Customer',
+        details: `Logged call with "${customer.customerName}" (${callResult || 'Connected'})${hasRecording ? ' with Audio Recording' : ''}.`,
+      });
+    } catch (e) {
+      console.warn('ActivityLog warning:', e);
+    }
 
     // Notify Admin if employee uploaded a call recording
     if (hasRecording && req.user.role === 'employee') {
-      await Notification.create({
-        title: '🎙️ New Call Recording Uploaded',
-        message: `${req.user.name} uploaded a call recording for customer ${customer.customerName} (${customer.mobileNumber}).`,
-        type: 'info',
-        recipientRole: 'admin',
-        customerId: customer._id,
-      });
+      try {
+        await Notification.create({
+          title: '🎙️ New Call Recording Uploaded',
+          message: `${req.user.name} uploaded a call recording for customer ${customer.customerName} (${customer.mobileNumber}).`,
+          type: 'info',
+          recipientRole: 'admin',
+          customerId: customer._id,
+        });
+      } catch (notifErr) {
+        console.warn('Notification warning:', notifErr);
+      }
     }
 
     res.status(201).json({
@@ -153,11 +170,11 @@ exports.logCall = async (req, res) => {
     });
   } catch (error) {
     console.error('Log Call Error:', error);
-    res.status(500).json({ success: false, message: 'Server error while saving call record.', error: error.message });
+    res.status(500).json({ success: false, message: 'Server error while saving call record: ' + error.message, error: error.message });
   }
 };
 
-// @desc    Direct upload call recording for a selected customer
+// @desc    Direct upload call recording for a selected customer or direct customer info
 // @route   POST /api/calls/upload-recording
 // @access  Private
 exports.uploadRecording = async (req, res) => {
@@ -195,7 +212,7 @@ exports.uploadRecording = async (req, res) => {
           mobileNumber: mobileNumber.trim(),
           companyName: companyName === 'CleanCruisers' ? 'CleanCruisers' : 'SofaShine',
           productInterested: productInterested || 'General Inquiry',
-          salesEmployeeName: req.user.name,
+          salesEmployeeName: req.user.name || 'Sales Representative',
           createdByEmployeeId: req.user._id,
           lastUpdatedBy: req.user._id,
           followUpStatus: 'Contacted',
@@ -205,7 +222,7 @@ exports.uploadRecording = async (req, res) => {
               action: 'CREATED',
               description: `Customer lead created via direct Call Recording upload by ${req.user.name}`,
               performedBy: req.user._id,
-              performerName: req.user.name,
+              performerName: req.user.name || 'User',
               timestamp: new Date(),
             },
           ],
@@ -218,7 +235,11 @@ exports.uploadRecording = async (req, res) => {
       });
     }
 
-    if (req.user.role === 'employee' && customer.createdByEmployeeId.toString() !== req.user._id.toString()) {
+    if (
+      req.user.role === 'employee' &&
+      customer.createdByEmployeeId &&
+      customer.createdByEmployeeId.toString() !== req.user._id.toString()
+    ) {
       return res.status(403).json({
         success: false,
         message: 'Access denied: You can only upload recordings for your own customers.',
@@ -229,18 +250,20 @@ exports.uploadRecording = async (req, res) => {
     const recordingFileName = req.file.originalname;
     const recordingFileSize = req.file.size;
     const recordingMimeType = req.file.mimetype;
+    const safeCallDate = parseSafeDate(callDate, new Date());
 
     const callLog = await CallHistory.create({
       customerId: customer._id,
-      customerName: customer.customerName,
-      mobileNumber: customer.mobileNumber,
+      customerName: customer.customerName || 'Customer',
+      mobileNumber: customer.mobileNumber || '',
+      companyName: customer.companyName || 'SofaShine',
       userId: req.user._id,
-      salesEmployeeName: req.user.name,
-      callDate: callDate || new Date(),
+      salesEmployeeName: req.user.name || 'Sales Representative',
+      callDate: safeCallDate,
       callTime: callTime || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       callResult: callResult || 'Connected',
       remarks: remarks || `Call recording uploaded on ${new Date().toLocaleDateString()}`,
-      newStatus: customer.followUpStatus,
+      newStatus: customer.followUpStatus || 'Contacted',
       newFollowUpDate: customer.followUpDate,
       newFollowUpTime: customer.followUpTime,
       recordingUrl,
@@ -252,11 +275,12 @@ exports.uploadRecording = async (req, res) => {
     });
 
     // Append to customer timeline
+    if (!customer.timeline) customer.timeline = [];
     customer.timeline.push({
       action: 'CALL_LOGGED',
       description: `🎙️ Call Recording Uploaded by ${req.user.name}: "${remarks || 'Customer discussion'}"`,
       performedBy: req.user._id,
-      performerName: req.user.name,
+      performerName: req.user.name || 'User',
       timestamp: new Date(),
       metadata: { callResult: callResult || 'Connected', hasRecording: true, recordingUrl },
     });
@@ -264,25 +288,33 @@ exports.uploadRecording = async (req, res) => {
     await customer.save();
 
     // Log Activity
-    await ActivityLog.create({
-      userId: req.user._id,
-      userName: req.user.name,
-      userRole: req.user.role,
-      action: 'UPLOAD_RECORDING',
-      targetId: customer._id,
-      targetModel: 'Customer',
-      details: `Uploaded call recording (${recordingFileName}) for customer "${customer.customerName}".`,
-    });
+    try {
+      await ActivityLog.create({
+        userId: req.user._id,
+        userName: req.user.name || 'User',
+        userRole: req.user.role || 'employee',
+        action: 'UPLOAD_RECORDING',
+        targetId: customer._id,
+        targetModel: 'Customer',
+        details: `Uploaded call recording (${recordingFileName}) for customer "${customer.customerName}".`,
+      });
+    } catch (actErr) {
+      console.warn('ActivityLog warning:', actErr);
+    }
 
     // Notify Admin
     if (req.user.role === 'employee') {
-      await Notification.create({
-        title: '🎙️ New Call Recording Uploaded',
-        message: `${req.user.name} uploaded a call recording for customer ${customer.customerName} (${customer.mobileNumber}).`,
-        type: 'info',
-        recipientRole: 'admin',
-        customerId: customer._id,
-      });
+      try {
+        await Notification.create({
+          title: '🎙️ New Call Recording Uploaded',
+          message: `${req.user.name} uploaded a call recording for customer ${customer.customerName} (${customer.mobileNumber}).`,
+          type: 'info',
+          recipientRole: 'admin',
+          customerId: customer._id,
+        });
+      } catch (notifErr) {
+        console.warn('Notification warning:', notifErr);
+      }
     }
 
     res.status(201).json({
@@ -292,43 +324,57 @@ exports.uploadRecording = async (req, res) => {
     });
   } catch (error) {
     console.error('Upload Recording Error:', error);
-    res.status(500).json({ success: false, message: 'Server error while uploading recording.', error: error.message });
+    res.status(500).json({ success: false, message: 'Server error while uploading recording: ' + error.message, error: error.message });
   }
 };
 
-// @desc    Get all call recordings (with interactive playback & admin filters)
+// @desc    Get recordings list for Hub (Admin view all, Employee view own)
 // @route   GET /api/calls/recordings
-// @access  Private (Admin sees all, Employee sees own)
+// @access  Private
 exports.getRecordings = async (req, res) => {
   try {
+    const {
+      search,
+      employeeId,
+      callResult,
+      startDate,
+      endDate,
+      page = 1,
+      limit = 20,
+    } = req.query;
+
     const query = { hasRecording: true };
 
-    // Role check
+    // Role-based visibility
     if (req.user.role === 'employee') {
       query.userId = req.user._id;
-    } else if (req.query.employeeId && req.query.employeeId !== 'all') {
-      query.userId = req.query.employeeId;
+    } else if (employeeId && employeeId !== 'all') {
+      query.userId = employeeId;
     }
 
     // Call result filter
-    if (req.query.callResult && req.query.callResult !== 'all') {
-      query.callResult = req.query.callResult;
+    if (callResult && callResult !== 'all') {
+      query.callResult = callResult;
     }
 
     // Date range filter
-    if (req.query.startDate || req.query.endDate) {
+    if (startDate || endDate) {
       query.callDate = {};
-      if (req.query.startDate) query.callDate.$gte = new Date(req.query.startDate);
-      if (req.query.endDate) {
-        const end = new Date(req.query.endDate);
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        query.callDate.$gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
         query.callDate.$lte = end;
       }
     }
 
-    // Search by Customer Name, Mobile, Employee, or Remarks
-    if (req.query.search && req.query.search.trim() !== '') {
-      const searchRegex = new RegExp(req.query.search.trim(), 'i');
+    // Search query across customer name, phone, employee, remarks
+    if (search && search.trim()) {
+      const searchRegex = new RegExp(search.trim(), 'i');
       query.$or = [
         { customerName: searchRegex },
         { mobileNumber: searchRegex },
@@ -337,61 +383,57 @@ exports.getRecordings = async (req, res) => {
       ];
     }
 
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 20;
-    const skip = (page - 1) * limit;
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = parseInt(limit, 10) || 20;
+    const skip = (pageNum - 1) * limitNum;
 
     const total = await CallHistory.countDocuments(query);
     const recordings = await CallHistory.find(query)
-      .populate('customerId', 'customerName mobileNumber companyName followUpStatus priority city')
-      .sort({ callDate: -1, createdAt: -1 })
+      .populate('customerId', 'customerName companyName mobileNumber city followUpStatus priority')
+      .populate('userId', 'name email designation avatarColor')
+      .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit);
+      .limit(limitNum);
 
-    // Summary statistics for dashboard cards
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+    // Calculate quick stats
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endToday = new Date();
+    endToday.setHours(23, 59, 59, 999);
 
-    const baseStatQuery = req.user.role === 'employee' ? { userId: req.user._id, hasRecording: true } : { hasRecording: true };
-    const totalRecordings = await CallHistory.countDocuments(baseStatQuery);
+    const baseStatsQuery = req.user.role === 'employee' ? { userId: req.user._id, hasRecording: true } : { hasRecording: true };
     const todayRecordings = await CallHistory.countDocuments({
-      ...baseStatQuery,
-      callDate: { $gte: startOfToday },
+      ...baseStatsQuery,
+      createdAt: { $gte: today, $lte: endToday },
     });
 
     res.status(200).json({
       success: true,
       total,
-      page,
-      pages: Math.ceil(total / limit),
+      page: pageNum,
+      pages: Math.ceil(total / limitNum),
+      recordings,
       stats: {
-        totalRecordings,
+        totalRecordings: total,
         todayRecordings,
       },
-      recordings,
     });
   } catch (error) {
     console.error('Get Recordings Error:', error);
-    res.status(500).json({ success: false, message: 'Failed to retrieve call recordings.', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch call recordings.', error: error.message });
   }
 };
 
-// @desc    Get call history for a customer
+// @desc    Get all call logs for a specific customer
 // @route   GET /api/calls/:customerId
 // @access  Private
 exports.getCustomerCalls = async (req, res) => {
   try {
     const { customerId } = req.params;
-    const customer = await Customer.findById(customerId);
-    if (!customer) {
-      return res.status(404).json({ success: false, message: 'Customer record not found.' });
-    }
 
-    if (req.user.role === 'employee' && customer.createdByEmployeeId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: 'Access denied.' });
-    }
-
-    const calls = await CallHistory.find({ customerId }).sort({ createdAt: -1 });
+    const calls = await CallHistory.find({ customerId })
+      .populate('userId', 'name email')
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -403,7 +445,7 @@ exports.getCustomerCalls = async (req, res) => {
   }
 };
 
-// @desc    Get all call logs across company (Admin or Employee own)
+// @desc    Get all calls (Admin or general)
 // @route   GET /api/calls
 // @access  Private
 exports.getAllCalls = async (req, res) => {
@@ -411,74 +453,66 @@ exports.getAllCalls = async (req, res) => {
     const query = {};
     if (req.user.role === 'employee') {
       query.userId = req.user._id;
-    } else if (req.query.employeeId && req.query.employeeId !== 'all') {
-      query.userId = req.query.employeeId;
     }
 
-    if (req.query.callResult && req.query.callResult !== 'all') {
-      query.callResult = req.query.callResult;
-    }
-
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 20;
-    const skip = (page - 1) * limit;
-
-    const total = await CallHistory.countDocuments(query);
     const calls = await CallHistory.find(query)
+      .populate('customerId', 'customerName companyName mobileNumber')
+      .populate('userId', 'name')
       .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+      .limit(100);
 
     res.status(200).json({
       success: true,
-      total,
-      page,
-      pages: Math.ceil(total / limit),
+      count: calls.length,
       calls,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to retrieve call logs.', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch calls.', error: error.message });
   }
 };
 
 // @desc    Delete a call recording
 // @route   DELETE /api/calls/recordings/:id
-// @access  Private (Admin only or Owner)
+// @access  Private (Admin only)
 exports.deleteRecording = async (req, res) => {
   try {
-    const callLog = await CallHistory.findById(req.params.id);
-    if (!callLog) {
+    const recording = await CallHistory.findById(req.params.id);
+    if (!recording) {
       return res.status(404).json({ success: false, message: 'Call recording not found.' });
     }
 
-    if (req.user.role !== 'admin' && callLog.userId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: 'Access denied: You can only delete your own recordings.' });
+    if (req.user.role !== 'admin' && recording.userId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Unauthorized to delete this recording.' });
     }
 
-    // Try deleting physical file from disk
-    if (callLog.recordingUrl) {
-      try {
-        const filePath = path.join(__dirname, '../..', callLog.recordingUrl);
-        if (fs.existsSync(filePath)) {
+    // Try deleting physical audio file if exists
+    if (recording.recordingUrl) {
+      const filePath = path.join(__dirname, '../../', recording.recordingUrl);
+      if (fs.existsSync(filePath)) {
+        try {
           fs.unlinkSync(filePath);
+        } catch (unlinkErr) {
+          console.warn('Could not delete audio file from disk:', unlinkErr.message);
         }
-      } catch (err) {
-        console.error('Failed to unlink audio file:', err);
       }
     }
 
     await CallHistory.findByIdAndDelete(req.params.id);
 
-    // Log activity
-    await ActivityLog.create({
-      userId: req.user._id,
-      userName: req.user.name,
-      userRole: req.user.role,
-      action: 'DELETE_RECORDING',
-      targetId: callLog.customerId,
-      targetModel: 'Customer',
-      details: `Deleted call recording with "${callLog.customerName}" (${callLog.recordingFileName || 'audio'}).`,
-    });
+    // Log Activity
+    try {
+      await ActivityLog.create({
+        userId: req.user._id,
+        userName: req.user.name || 'User',
+        userRole: req.user.role || 'admin',
+        action: 'DELETE_RECORDING',
+        targetId: recording.customerId,
+        targetModel: 'Customer',
+        details: `Deleted call recording for customer "${recording.customerName}".`,
+      });
+    } catch (actErr) {
+      console.warn('ActivityLog warning:', actErr);
+    }
 
     res.status(200).json({
       success: true,
