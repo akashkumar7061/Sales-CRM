@@ -11,13 +11,14 @@ const CashCollectionSchema = new mongoose.Schema(
     employeeId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: [true, 'Worker/Employee is required'],
+      required: false,
       index: true,
     },
     employeeName: {
       type: String,
       required: [true, 'Worker/Employee name is required'],
       trim: true,
+      index: true,
     },
     amount: {
       type: Number,

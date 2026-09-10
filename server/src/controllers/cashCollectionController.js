@@ -27,8 +27,17 @@ exports.createCollection = async (req, res) => {
       notes = '',
     } = req.body;
 
-    if (!employeeId) {
-      return res.status(400).json({ success: false, message: 'Please select an employee / worker.' });
+    let finalEmployeeName = (employeeName || '').trim();
+
+    if (!finalEmployeeName && employeeId) {
+      const user = await User.findById(employeeId).select('name');
+      if (user) {
+        finalEmployeeName = user.name;
+      }
+    }
+
+    if (!finalEmployeeName) {
+      return res.status(400).json({ success: false, message: 'Please enter Worker / Sales Employee name.' });
     }
 
     const parsedAmount = safeNumber(amount, 0);
@@ -36,21 +45,11 @@ exports.createCollection = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Amount collected must be greater than 0.' });
     }
 
-    let finalEmployeeName = employeeName;
-    if (!finalEmployeeName) {
-      const user = await User.findById(employeeId).select('name');
-      if (user) {
-        finalEmployeeName = user.name;
-      } else {
-        finalEmployeeName = 'Unknown Worker';
-      }
-    }
-
     const collectionDate = date ? new Date(date) : new Date();
 
     const collection = await CashCollection.create({
       date: collectionDate,
-      employeeId,
+      employeeId: employeeId || undefined,
       employeeName: finalEmployeeName,
       amount: parsedAmount,
       paymentMode,
@@ -103,8 +102,10 @@ exports.getCollections = async (req, res) => {
 
     const query = {};
 
-    // Filter by Employee
-    if (req.query.employeeId && req.query.employeeId !== 'all') {
+    // Filter by Worker Name or ID
+    if (req.query.workerName && req.query.workerName !== 'all') {
+      query.employeeName = req.query.workerName;
+    } else if (req.query.employeeId && req.query.employeeId !== 'all') {
       query.employeeId = req.query.employeeId;
     }
 
@@ -178,7 +179,7 @@ exports.getCollections = async (req, res) => {
 
     const totalFilteredAmount = aggregateMetrics[0]?.totalCollected || 0;
 
-    // 3. Today's Total Metrics (Regardless of date filter unless employee is filtered)
+    // 3. Today's Total Metrics
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const endOfToday = new Date();
@@ -187,7 +188,8 @@ exports.getCollections = async (req, res) => {
     const todayQuery = {
       date: { $gte: startOfToday, $lte: endOfToday },
     };
-    if (query.employeeId) todayQuery.employeeId = query.employeeId;
+    if (query.employeeName) todayQuery.employeeName = query.employeeName;
+    else if (query.employeeId) todayQuery.employeeId = query.employeeId;
 
     const todayMetrics = await CashCollection.aggregate([
       { $match: todayQuery },
@@ -203,7 +205,8 @@ exports.getCollections = async (req, res) => {
     const monthQuery = {
       date: { $gte: startOfMonth },
     };
-    if (query.employeeId) monthQuery.employeeId = query.employeeId;
+    if (query.employeeName) monthQuery.employeeName = query.employeeName;
+    else if (query.employeeId) monthQuery.employeeId = query.employeeId;
 
     const monthMetrics = await CashCollection.aggregate([
       { $match: monthQuery },
@@ -211,12 +214,12 @@ exports.getCollections = async (req, res) => {
     ]);
     const thisMonthAmount = monthMetrics[0]?.total || 0;
 
-    // 5. Worker Breakdown for current filter
+    // 5. Worker Breakdown for current filter (grouped by worker name)
     const workerBreakdown = await CashCollection.aggregate([
       { $match: query },
       {
         $group: {
-          _id: '$employeeId',
+          _id: '$employeeName',
           employeeName: { $first: '$employeeName' },
           totalAmount: { $sum: '$amount' },
           collectionsCount: { $sum: 1 },
@@ -225,6 +228,9 @@ exports.getCollections = async (req, res) => {
       { $sort: { totalAmount: -1 } },
       { $limit: 10 },
     ]);
+
+    // 6. Distinct worker names list for filters
+    const distinctWorkers = await CashCollection.distinct('employeeName');
 
     res.status(200).json({
       success: true,
@@ -237,6 +243,7 @@ exports.getCollections = async (req, res) => {
         todayCount,
         thisMonthAmount,
         workerBreakdown,
+        distinctWorkers: distinctWorkers.filter(Boolean).sort(),
       },
       collections,
     });

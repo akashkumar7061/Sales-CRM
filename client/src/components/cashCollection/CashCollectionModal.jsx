@@ -36,8 +36,8 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
       });
     } else {
       setFormData({
-        employeeId: employees.length > 0 ? employees[0]._id : '',
-        employeeName: employees.length > 0 ? employees[0].name : '',
+        employeeId: '',
+        employeeName: '',
         date: new Date().toISOString().split('T')[0],
         amount: '',
         paymentMode: 'Cash',
@@ -48,23 +48,25 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
         notes: '',
       });
     }
-  }, [editData, isOpen, employees]);
+  }, [editData, isOpen]);
 
-  const handleEmployeeChange = (e) => {
-    const selectedId = e.target.value;
-    const emp = employees.find((u) => u._id === selectedId);
+  const handleNameChange = (nameVal) => {
+    // Check if entered name matches any registered employee
+    const matched = employees.find(
+      (e) => e.name.toLowerCase().trim() === nameVal.toLowerCase().trim()
+    );
     setFormData((prev) => ({
       ...prev,
-      employeeId: selectedId,
-      employeeName: emp ? emp.name : '',
+      employeeName: nameVal,
+      employeeId: matched ? matched._id : '',
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.employeeId) {
-      toast.error('Please select a worker / sales employee.');
+    if (!formData.employeeName || !formData.employeeName.trim()) {
+      toast.error('Please enter the Worker / Sales Employee name.');
       return;
     }
 
@@ -115,25 +117,44 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Worker & Date Section */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* Worker / Sales Employee Selection */}
+          {/* Worker / Sales Employee Input (Admin types name directly) */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
               <User className="h-3.5 w-3.5 text-indigo-500" />
-              Worker / Sales Employee <span className="text-rose-500">*</span>
+              Worker / Sales Employee Name <span className="text-rose-500">*</span>
             </label>
-            <select
-              value={formData.employeeId}
-              onChange={handleEmployeeChange}
-              required
-              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm font-medium text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-            >
-              <option value="" disabled>-- Select Worker / Employee --</option>
-              {employees.map((emp) => (
-                <option key={emp._id} value={emp._id}>
-                  {emp.name} ({emp.role === 'admin' ? 'Admin' : 'Worker/Sales'})
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <input
+                type="text"
+                list="workers-list"
+                placeholder="Type worker name (e.g. Ramesh, Suraj...)"
+                value={formData.employeeName}
+                onChange={(e) => handleNameChange(e.target.value)}
+                required
+                autoFocus
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm font-semibold text-slate-900 dark:text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              />
+              <datalist id="workers-list">
+                {employees.map((emp) => (
+                  <option key={emp._id} value={emp.name} />
+                ))}
+              </datalist>
+            </div>
+            {employees.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                <span className="text-[10px] text-slate-400">Quick pick:</span>
+                {employees.slice(0, 5).map((emp) => (
+                  <button
+                    key={emp._id}
+                    type="button"
+                    onClick={() => handleNameChange(emp.name)}
+                    className="rounded-md bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/60 dark:hover:text-indigo-400 transition-colors"
+                  >
+                    {emp.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Collection Date */}

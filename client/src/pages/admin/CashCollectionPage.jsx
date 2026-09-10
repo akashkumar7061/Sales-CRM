@@ -38,7 +38,7 @@ export const CashCollectionPage = () => {
 
   // Filters
   const [search, setSearch] = useState('');
-  const [employeeFilter, setEmployeeFilter] = useState('all');
+  const [workerFilter, setWorkerFilter] = useState('all');
   const [companyFilter, setCompanyFilter] = useState('all');
   const [paymentModeFilter, setPaymentModeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -57,7 +57,7 @@ export const CashCollectionPage = () => {
   const [deletingItem, setDeletingItem] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Fetch Employees for dropdowns
+  // Fetch Employees for suggestions
   const fetchEmployees = async () => {
     try {
       const res = await api.get('/employees');
@@ -113,7 +113,7 @@ export const CashCollectionPage = () => {
       const params = {
         page,
         limit: 25,
-        employeeId: employeeFilter,
+        workerName: workerFilter,
         companyName: companyFilter,
         paymentMode: paymentModeFilter,
         status: statusFilter,
@@ -136,7 +136,7 @@ export const CashCollectionPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, employeeFilter, companyFilter, paymentModeFilter, statusFilter, search, startDate, endDate]);
+  }, [page, workerFilter, companyFilter, paymentModeFilter, statusFilter, search, startDate, endDate]);
 
   useEffect(() => {
     fetchCollections();
@@ -144,7 +144,7 @@ export const CashCollectionPage = () => {
 
   const handleResetFilters = () => {
     setSearch('');
-    setEmployeeFilter('all');
+    setWorkerFilter('all');
     setCompanyFilter('all');
     setPaymentModeFilter('all');
     setStatusFilter('all');
@@ -176,7 +176,7 @@ export const CashCollectionPage = () => {
     try {
       toast.loading('Preparing CSV export...', { id: 'csv-export' });
       const params = {
-        employeeId: employeeFilter,
+        workerName: workerFilter !== 'all' ? workerFilter : undefined,
         companyName: companyFilter,
         paymentMode: paymentModeFilter,
         startDate: startDate || undefined,
@@ -452,19 +452,27 @@ export const CashCollectionPage = () => {
           {/* Worker Filter */}
           <div>
             <select
-              value={employeeFilter}
+              value={workerFilter}
               onChange={(e) => {
-                setEmployeeFilter(e.target.value);
+                setWorkerFilter(e.target.value);
                 setPage(1);
               }}
               className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs font-medium text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             >
-              <option value="all">👥 All Workers / Employees</option>
-              {employees.map((emp) => (
-                <option key={emp._id} value={emp._id}>
-                  {emp.name}
-                </option>
-              ))}
+              <option value="all">👥 All Workers / Sales Reps</option>
+              {Array.from(
+                new Set([
+                  ...(stats.distinctWorkers || []),
+                  ...employees.map((e) => e.name),
+                ])
+              )
+                .filter(Boolean)
+                .sort()
+                .map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
             </select>
           </div>
 
@@ -560,7 +568,7 @@ export const CashCollectionPage = () => {
           )}
 
           {/* Reset Filters */}
-          {(search || employeeFilter !== 'all' || companyFilter !== 'all' || paymentModeFilter !== 'all' || dateRangePreset !== 'all') && (
+          {(search || workerFilter !== 'all' || companyFilter !== 'all' || paymentModeFilter !== 'all' || dateRangePreset !== 'all') && (
             <button
               onClick={handleResetFilters}
               className="text-xs font-bold text-rose-500 hover:text-rose-600 hover:underline ml-auto"
