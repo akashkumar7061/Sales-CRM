@@ -44,9 +44,23 @@ export const CustomerTable = ({
   onOpenImportModal,
 }) => {
   const { user, isAdmin } = useAuth();
+  const cacheKey = `cached_cust_${isAdmin ? 'admin' : 'emp'}`;
 
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [customers, setCustomers] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    try {
+      return !sessionStorage.getItem(cacheKey);
+    } catch (e) {
+      return true;
+    }
+  });
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
@@ -98,7 +112,10 @@ export const CustomerTable = ({
 
   // Fetch Customers API
   const fetchCustomers = useCallback(async () => {
-    setLoading(true);
+    // Only set loading full spinner if we don't have customers yet
+    if (customers.length === 0) {
+      setLoading(true);
+    }
     try {
       const params = {
         page,
@@ -126,6 +143,11 @@ export const CustomerTable = ({
         setTotalPages(res.data.totalPages || 1);
         if (res.data.tabCounts) {
           setTabCounts(res.data.tabCounts);
+        }
+        if (page === 1 && !search && companyFilter === 'all' && statusFilter === 'all' && followUpTab === 'all') {
+          try {
+            sessionStorage.setItem(cacheKey, JSON.stringify(res.data.customers));
+          } catch (e) {}
         }
       }
     } catch (error) {

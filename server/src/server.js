@@ -24,8 +24,16 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static uploaded files (Documents, attachments)
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.set('etag', 'strong');
+
+// Serve static uploaded files with 30-day mobile browser caching
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, '../uploads'), {
+    maxAge: '30d',
+    immutable: true,
+  })
+);
 
 // API Routes
 app.use('/api/auth', require('./routes/authRoutes'));

@@ -19,18 +19,19 @@ export default defineConfig({
   build: {
     outDir: '../dist',
     emptyOutDir: true,
-    target: 'esnext',
+    target: 'es2020',
     minify: 'esbuild',
     cssMinify: true,
-    chunkSizeWarningLimit: 1000,
+    cssCodeSplit: true,
+    sourcemap: false,
+    chunkSizeWarningLimit: 1500,
     rollupOptions: {
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-icons': ['lucide-react'],
           'vendor-charts': ['recharts'],
-          'vendor-excel': ['xlsx'],
-          'vendor-pdf': ['jspdf', 'jspdf-autotable'],
+          'vendor-pdf': ['jspdf', 'jspdf-autotable', 'html2canvas', 'dompurify'],
         },
       },
     },
