@@ -38,6 +38,7 @@ app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/import-export', require('./routes/importExportRoutes'));
 app.use('/api/logs', require('./routes/logRoutes'));
+app.use('/api/cash-collections', require('./routes/cashCollectionRoutes'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

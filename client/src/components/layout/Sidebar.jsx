@@ -15,6 +15,7 @@ import {
   TrendingUp,
   FileText,
   Mic,
+  Wallet,
 } from 'lucide-react';
 
 export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
@@ -35,6 +36,11 @@ export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
       name: 'Employee Management',
       path: '/admin/employees',
       icon: UserCheck,
+    },
+    {
+      name: 'Daily Cash Collection',
+      path: '/admin/cash-collections',
+      icon: Wallet,
     },
     {
       name: 'Call Recordings Hub',

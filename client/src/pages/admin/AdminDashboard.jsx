@@ -29,6 +29,7 @@ import {
   Target,
   KeyRound,
   Mic,
+  Wallet,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -132,6 +133,14 @@ export const AdminDashboard = () => {
           >
             <Users className="h-3.5 w-3.5" />
             <span>Team List</span>
+          </Link>
+
+          <Link
+            to="/admin/cash-collections"
+            className="flex items-center gap-1.5 rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/40 px-3.5 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 transition-colors shadow-xs"
+          >
+            <Wallet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Cash Collection</span>
           </Link>
 
           <Link

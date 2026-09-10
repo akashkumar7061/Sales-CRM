@@ -30,6 +30,9 @@ const TargetManagementPage = lazy(() =>
 const CallRecordingsPage = lazy(() =>
   import('./pages/admin/CallRecordingsPage').then((m) => ({ default: m.CallRecordingsPage }))
 );
+const CashCollectionPage = lazy(() =>
+  import('./pages/admin/CashCollectionPage').then((m) => ({ default: m.CashCollectionPage }))
+);
 
 // Employee Pages (Lazy Loaded)
 const EmployeeCustomers = lazy(() =>
@@ -124,6 +127,7 @@ function App() {
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="customers" element={<AdminCustomers />} />
                 <Route path="employees" element={<EmployeeManagement />} />
+                <Route path="cash-collections" element={<CashCollectionPage />} />
                 <Route path="recordings" element={<CallRecordingsPage />} />
                 <Route path="targets" element={<TargetManagementPage />} />
                 <Route path="reports" element={<DailyWorkReportPage />} />
