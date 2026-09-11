@@ -80,6 +80,7 @@ export const CustomerFormModal = ({ isOpen, onClose, customerToEdit, onSuccess }
 
   const [audioFile, setAudioFile] = useState(null);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState('');
+  const [recordingDuration, setRecordingDuration] = useState('');
   const fileInputRef = useRef(null);
 
   const [employees, setEmployees] = useState([]);
@@ -96,7 +97,19 @@ export const CustomerFormModal = ({ isOpen, onClose, customerToEdit, onSuccess }
         return;
       }
       setAudioFile(file);
-      setAudioPreviewUrl(URL.createObjectURL(file));
+      const url = URL.createObjectURL(file);
+      setAudioPreviewUrl(url);
+
+      const audio = new Audio(url);
+      audio.onloadedmetadata = () => {
+        if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+          const totalSecs = Math.round(audio.duration);
+          const mins = Math.floor(totalSecs / 60);
+          const secs = totalSecs % 60;
+          setRecordingDuration(`${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
+        }
+      };
+
       toast.success(`Audio attached: ${file.name}`);
     }
   };
@@ -104,6 +117,7 @@ export const CustomerFormModal = ({ isOpen, onClose, customerToEdit, onSuccess }
   const handleRemoveAudio = () => {
     setAudioFile(null);
     setAudioPreviewUrl('');
+    setRecordingDuration('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -235,6 +249,7 @@ export const CustomerFormModal = ({ isOpen, onClose, customerToEdit, onSuccess }
       });
       if (audioFile) {
         data.append('audio', audioFile);
+        if (recordingDuration) data.append('recordingDuration', recordingDuration);
       }
 
       if (isEditing) {

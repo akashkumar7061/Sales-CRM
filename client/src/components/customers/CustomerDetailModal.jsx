@@ -395,6 +395,7 @@ export const CustomerDetailModal = ({ isOpen, onClose, customer: initialCustomer
                           <AudioPlayer
                             src={call.recordingUrl}
                             fileName={call.recordingFileName || 'Call_Recording.mp3'}
+                            durationHint={call.recordingDuration}
                           />
                         </div>
                       )}

@@ -266,6 +266,7 @@ export const EmployeeRecordingsPage = () => {
                   <AudioPlayer
                     src={rec.recordingUrl}
                     fileName={rec.recordingFileName || 'Call_Recording.mp3'}
+                    durationHint={rec.recordingDuration}
                   />
                 </div>
               </div>

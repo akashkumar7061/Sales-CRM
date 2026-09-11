@@ -18,6 +18,7 @@ export const CallLogModal = ({ isOpen, onClose, customer, onCallLogged }) => {
   // Audio Recording State
   const [audioFile, setAudioFile] = useState(null);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState('');
+  const [recordingDuration, setRecordingDuration] = useState('');
   const fileInputRef = useRef(null);
 
   const [submitting, setSubmitting] = useState(false);
@@ -30,7 +31,19 @@ export const CallLogModal = ({ isOpen, onClose, customer, onCallLogged }) => {
         return;
       }
       setAudioFile(file);
-      setAudioPreviewUrl(URL.createObjectURL(file));
+      const url = URL.createObjectURL(file);
+      setAudioPreviewUrl(url);
+
+      const audio = new Audio(url);
+      audio.onloadedmetadata = () => {
+        if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+          const totalSecs = Math.round(audio.duration);
+          const mins = Math.floor(totalSecs / 60);
+          const secs = totalSecs % 60;
+          setRecordingDuration(`${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
+        }
+      };
+
       toast.success(`Audio attached: ${file.name}`);
     }
   };
@@ -38,6 +51,7 @@ export const CallLogModal = ({ isOpen, onClose, customer, onCallLogged }) => {
   const handleRemoveAudio = () => {
     setAudioFile(null);
     setAudioPreviewUrl('');
+    setRecordingDuration('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -57,6 +71,7 @@ export const CallLogModal = ({ isOpen, onClose, customer, onCallLogged }) => {
       formData.append('newStatus', newStatus);
       if (newFollowUpDate) formData.append('newFollowUpDate', newFollowUpDate);
       if (newFollowUpTime) formData.append('newFollowUpTime', newFollowUpTime);
+      if (recordingDuration) formData.append('recordingDuration', recordingDuration);
 
       if (audioFile) {
         formData.append('audio', audioFile);

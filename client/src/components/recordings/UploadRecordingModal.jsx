@@ -41,6 +41,8 @@ export const UploadRecordingModal = ({ isOpen, onClose, onSuccess }) => {
       (c.companyName && c.companyName.toLowerCase().includes(customerSearch.toLowerCase()))
   );
 
+  const [recordingDuration, setRecordingDuration] = useState('');
+
   const handleAudioChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -49,7 +51,20 @@ export const UploadRecordingModal = ({ isOpen, onClose, onSuccess }) => {
         return;
       }
       setAudioFile(file);
-      setAudioPreviewUrl(URL.createObjectURL(file));
+      const url = URL.createObjectURL(file);
+      setAudioPreviewUrl(url);
+
+      // Pre-calculate audio duration
+      const audio = new Audio(url);
+      audio.onloadedmetadata = () => {
+        if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+          const totalSecs = Math.round(audio.duration);
+          const mins = Math.floor(totalSecs / 60);
+          const secs = totalSecs % 60;
+          setRecordingDuration(`${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
+        }
+      };
+
       toast.success(`Audio attached: ${file.name}`);
     }
   };
@@ -57,6 +72,7 @@ export const UploadRecordingModal = ({ isOpen, onClose, onSuccess }) => {
   const handleRemoveAudio = () => {
     setAudioFile(null);
     setAudioPreviewUrl('');
+    setRecordingDuration('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -70,6 +86,7 @@ export const UploadRecordingModal = ({ isOpen, onClose, onSuccess }) => {
     setRemarks('');
     setCallResult('Connected');
     setMode('direct');
+    setRecordingDuration('');
     handleRemoveAudio();
   };
 
@@ -116,6 +133,7 @@ export const UploadRecordingModal = ({ isOpen, onClose, onSuccess }) => {
 
       formData.append('callResult', callResult);
       formData.append('remarks', remarks.trim() || `Customer call recording (${callResult})`);
+      if (recordingDuration) formData.append('recordingDuration', recordingDuration);
       formData.append('audio', audioFile);
 
       const res = await api.post('/calls/upload-recording', formData, {

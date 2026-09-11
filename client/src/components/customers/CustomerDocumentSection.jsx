@@ -171,7 +171,15 @@ export const CustomerDocumentSection = ({ customer, onCustomerUpdated }) => {
 
                 <div className="flex items-center gap-1.5 shrink-0">
                   <a
-                    href={`http://localhost:5000${doc.fileUrl}`}
+                    href={
+                      doc.fileUrl?.startsWith('http')
+                        ? doc.fileUrl
+                        : import.meta.env.VITE_API_URL
+                        ? `${import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '')}${doc.fileUrl}`
+                        : typeof window !== 'undefined' && window.location.port === '5173'
+                        ? `http://${window.location.hostname}:5000${doc.fileUrl}`
+                        : doc.fileUrl
+                    }
                     target="_blank"
                     rel="noreferrer"
                     download

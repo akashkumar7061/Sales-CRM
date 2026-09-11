@@ -320,7 +320,14 @@ exports.getRecordings = async (req, res) => {
       limit = 20,
     } = req.query;
 
-    const query = { hasRecording: true };
+    const recordingMatch = {
+      $or: [
+        { hasRecording: true },
+        { recordingUrl: { $exists: true, $ne: '', $ne: null } },
+      ],
+    };
+
+    const query = { ...recordingMatch };
 
     // Role-based visibility
     if (req.user.role === 'employee') {
@@ -352,12 +359,18 @@ exports.getRecordings = async (req, res) => {
     // Search query across customer name, phone, employee, remarks
     if (search && search.trim()) {
       const searchRegex = new RegExp(search.trim(), 'i');
-      query.$or = [
-        { customerName: searchRegex },
-        { mobileNumber: searchRegex },
-        { salesEmployeeName: searchRegex },
-        { remarks: searchRegex },
+      query.$and = [
+        recordingMatch,
+        {
+          $or: [
+            { customerName: searchRegex },
+            { mobileNumber: searchRegex },
+            { salesEmployeeName: searchRegex },
+            { remarks: searchRegex },
+          ],
+        },
       ];
+      delete query.$or;
     }
 
     const pageNum = parseInt(page, 10) || 1;
@@ -378,7 +391,7 @@ exports.getRecordings = async (req, res) => {
     const endToday = new Date();
     endToday.setHours(23, 59, 59, 999);
 
-    const baseStatsQuery = req.user.role === 'employee' ? { userId: req.user._id, hasRecording: true } : { hasRecording: true };
+    const baseStatsQuery = req.user.role === 'employee' ? { userId: req.user._id, ...recordingMatch } : { ...recordingMatch };
     const todayRecordings = await CallHistory.countDocuments({
       ...baseStatsQuery,
       createdAt: { $gte: today, $lte: endToday },
