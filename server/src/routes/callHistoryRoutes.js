@@ -15,7 +15,7 @@ const {
 } = require('../controllers/callHistoryController');
 
 // Ensure recordings upload directory exists
-const recordingsDir = path.join(__dirname, '../../uploads/recordings');
+const recordingsDir = path.join(__dirname, '../uploads/recordings');
 if (!fs.existsSync(recordingsDir)) {
   fs.mkdirSync(recordingsDir, { recursive: true });
 }
@@ -33,14 +33,39 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  // Allow common audio mime types and file extensions
-  const allowedExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.webm', '.amr', '.caf', '.3gp', '.opus', '.wma'];
+  // Allow all standard and mobile audio recording formats
+  const allowedExtensions = [
+    '.mp3',
+    '.mpeg',
+    '.mpg',
+    '.wav',
+    '.m4a',
+    '.mp4',
+    '.aac',
+    '.ogg',
+    '.oga',
+    '.webm',
+    '.weba',
+    '.amr',
+    '.caf',
+    '.3gp',
+    '.3gpp',
+    '.opus',
+    '.wma',
+    '.flac',
+  ];
   const ext = path.extname(file.originalname).toLowerCase();
-  
-  if (file.mimetype.startsWith('audio/') || file.mimetype.startsWith('video/webm') || allowedExtensions.includes(ext)) {
+
+  if (
+    file.mimetype.startsWith('audio/') ||
+    file.mimetype.startsWith('video/webm') ||
+    file.mimetype.startsWith('video/mp4') ||
+    file.mimetype === 'application/octet-stream' ||
+    allowedExtensions.includes(ext)
+  ) {
     cb(null, true);
   } else {
-    cb(new Error('Only audio recording files (.mp3, .wav, .m4a, .aac, .ogg, .webm, .amr, .3gp) are allowed.'), false);
+    cb(new Error('Only audio recording files (.mp3, .mpeg, .wav, .m4a, .aac, .ogg, .webm, .amr, .3gp) are allowed.'), false);
   }
 };
 

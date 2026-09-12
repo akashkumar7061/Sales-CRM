@@ -34,7 +34,7 @@ const saveFileToGridFS = async (filePath, filename, metadata = {}) => {
       return existing[0]._id;
     }
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const uploadStream = bucket.openUploadStream(filename, {
         metadata: {
           ...metadata,
@@ -42,15 +42,17 @@ const saveFileToGridFS = async (filePath, filename, metadata = {}) => {
         },
       });
 
+      const streamId = uploadStream.id;
+
       fs.createReadStream(filePath)
         .pipe(uploadStream)
         .on('error', (err) => {
           console.error('GridFS Upload Stream Error:', err);
-          reject(err);
+          resolve(null);
         })
-        .on('finish', (file) => {
-          console.log('✅ File permanently backed up to MongoDB Cloud GridFS:', filename, file._id);
-          resolve(file._id);
+        .on('finish', () => {
+          console.log('✅ File permanently backed up to MongoDB Cloud GridFS:', filename, streamId);
+          resolve(streamId);
         });
     });
   } catch (error) {

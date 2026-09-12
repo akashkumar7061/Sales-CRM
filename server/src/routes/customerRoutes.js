@@ -16,12 +16,12 @@ const {
 const { protect, approvedOnly } = require('../middleware/auth');
 
 // Ensure upload directories exist
-const uploadDir = path.join(__dirname, '../../uploads/documents');
+const uploadDir = path.join(__dirname, '../uploads/documents');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-const recordingsDir = path.join(__dirname, '../../uploads/recordings');
+const recordingsDir = path.join(__dirname, '../uploads/recordings');
 if (!fs.existsSync(recordingsDir)) {
   fs.mkdirSync(recordingsDir, { recursive: true });
 }
@@ -55,8 +55,45 @@ const recordingStorage = multer.diskStorage({
   },
 });
 
+const audioFileFilter = (req, file, cb) => {
+  const allowedExtensions = [
+    '.mp3',
+    '.mpeg',
+    '.mpg',
+    '.wav',
+    '.m4a',
+    '.mp4',
+    '.aac',
+    '.ogg',
+    '.oga',
+    '.webm',
+    '.weba',
+    '.amr',
+    '.caf',
+    '.3gp',
+    '.3gpp',
+    '.opus',
+    '.wma',
+    '.flac',
+  ];
+  const ext = path.extname(file.originalname).toLowerCase();
+
+  if (
+    file.mimetype.startsWith('audio/') ||
+    file.mimetype.startsWith('video/webm') ||
+    file.mimetype.startsWith('video/mp4') ||
+    file.mimetype === 'application/octet-stream' ||
+    allowedExtensions.includes(ext)
+  ) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only audio recording files are allowed.'), false);
+  }
+};
+
 const uploadRecording = multer({
   storage: recordingStorage,
+  fileFilter: audioFileFilter,
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
 });
 
