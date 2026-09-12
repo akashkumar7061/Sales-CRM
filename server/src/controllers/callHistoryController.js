@@ -513,3 +513,27 @@ exports.deleteRecording = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to delete recording.', error: error.message });
   }
 };
+
+// @desc    Download audio recording file
+// @route   GET /api/calls/recordings/:id/download
+// @access  Private
+exports.downloadRecordingFile = async (req, res) => {
+  try {
+    const recording = await CallHistory.findById(req.params.id);
+    if (!recording || !recording.recordingUrl) {
+      return res.status(404).json({ success: false, message: 'Recording audio file not found.' });
+    }
+
+    const filePath = path.join(__dirname, '../../', recording.recordingUrl);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, message: 'Audio file not found on disk.' });
+    }
+
+    const downloadName = recording.recordingFileName || `recording_${recording._id}.mp3`;
+    res.download(filePath, downloadName);
+  } catch (error) {
+    console.error('Download recording error:', error);
+    res.status(500).json({ success: false, message: 'Error downloading recording file.', error: error.message });
+  }
+};
+

@@ -11,6 +11,7 @@ const {
   getRecordings,
   uploadRecording,
   deleteRecording,
+  downloadRecordingFile,
 } = require('../controllers/callHistoryController');
 
 // Ensure recordings upload directory exists
@@ -53,6 +54,9 @@ router.use(protect);
 
 // Recordings list hub (Admin view all, Employee view own)
 router.get('/recordings', getRecordings);
+
+// Download specific recording
+router.get('/recordings/:id/download', downloadRecordingFile);
 
 // Direct recording upload
 router.post('/upload-recording', upload.single('audio'), uploadRecording);

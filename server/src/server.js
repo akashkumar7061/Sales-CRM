@@ -14,7 +14,16 @@ connectDB();
 const app = express();
 
 // Middlewares
-app.use(compression());
+app.use(
+  compression({
+    filter: (req, res) => {
+      if (req.path && req.path.startsWith('/uploads/')) {
+        return false;
+      }
+      return compression.filter(req, res);
+    },
+  })
+);
 app.use(
   cors({
     origin: '*', // Allow all origins for dev/internal network access
