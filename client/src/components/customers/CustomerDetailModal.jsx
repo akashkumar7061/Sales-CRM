@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { Modal } from '../common/Modal';
+import { ConfirmModal } from '../common/ConfirmModal';
 import { StatusBadge, CompanyBadge, PriorityBadge } from '../common/Badge';
 import { CustomerTimelineTab } from './CustomerTimelineTab';
 import { CustomerDocumentSection } from './CustomerDocumentSection';
@@ -26,10 +28,12 @@ import {
   Layers,
   Flame,
   Plus,
+  Trash2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const CustomerDetailModal = ({ isOpen, onClose, customer: initialCustomer, onEdit, onCustomerUpdated }) => {
+  const { user, isAdmin } = useAuth();
   const [customer, setCustomer] = useState(initialCustomer);
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'calls' | 'timeline' | 'documents'
   const [calls, setCalls] = useState([]);
@@ -38,6 +42,8 @@ export const CustomerDetailModal = ({ isOpen, onClose, customer: initialCustomer
   // Modals for quick actions
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
+  const [callToDelete, setCallToDelete] = useState(null);
+  const [isDeletingCall, setIsDeletingCall] = useState(false);
 
   useEffect(() => {
     setCustomer(initialCustomer);
@@ -81,6 +87,24 @@ export const CustomerDetailModal = ({ isOpen, onClose, customer: initialCustomer
     fetchCalls();
   };
 
+  const handleDeleteCall = async () => {
+    if (!callToDelete) return;
+    setIsDeletingCall(true);
+    try {
+      const res = await api.delete(`/calls/recordings/${callToDelete._id}`);
+      if (res.data.success) {
+        toast.success(res.data.message || 'Call log / recording deleted successfully.');
+        setCallToDelete(null);
+        fetchCalls();
+        if (onCustomerUpdated) onCustomerUpdated();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete call recording.');
+    } finally {
+      setIsDeletingCall(false);
+    }
+  };
+
   const handleDocumentUpdated = (updatedCust) => {
     setCustomer(updatedCust);
     if (onCustomerUpdated) onCustomerUpdated(updatedCust);
@@ -102,40 +126,30 @@ export const CustomerDetailModal = ({ isOpen, onClose, customer: initialCustomer
                 <StatusBadge status={customer.followUpStatus} />
               </div>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                <Building className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-                <span>{customer.productInterested}</span>
-                <span className="text-slate-300 dark:text-slate-700">•</span>
-                <MapPin className="h-3 w-3 text-amber-500" />
-                <span>{customer.location}, {customer.city}</span>
+                <span>Created by {customer.salesEmployeeName}</span>
+                <span>•</span>
+                <span>{formatDate(customer.date)}</span>
               </p>
             </div>
 
-            {/* Quick Action Buttons */}
+            {/* Top Quick Actions */}
             <div className="flex flex-wrap items-center gap-2">
-              <a
-                href={`tel:${customer.mobileNumber}`}
-                className="flex items-center gap-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-500/30 px-3 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all shadow-xs"
-              >
-                <PhoneCall className="h-3.5 w-3.5" />
-                <span>Call</span>
-              </a>
-
               <button
                 type="button"
-                onClick={() => setIsWhatsAppOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/30 px-3 py-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all shadow-xs"
+                onClick={() => setIsCallModalOpen(true)}
+                className="flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition-colors"
               >
-                <MessageSquare className="h-3.5 w-3.5" />
-                <span>WhatsApp</span>
+                <PhoneCall className="h-3.5 w-3.5" />
+                <span>Log Call</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => setIsCallModalOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-indigo-600/20 active:scale-95 transition-all"
+                onClick={() => setIsWhatsAppOpen(true)}
+                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition-colors"
               >
-                <PhoneCall className="h-3.5 w-3.5" />
-                <span>Log Call</span>
+                <MessageSquare className="h-3.5 w-3.5" />
+                <span>WhatsApp</span>
               </button>
 
               {onEdit && (
@@ -145,7 +159,7 @@ export const CustomerDetailModal = ({ isOpen, onClose, customer: initialCustomer
                     onClose();
                     onEdit(customer);
                   }}
-                  className="flex items-center gap-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 transition-colors"
                 >
                   <Edit2 className="h-3.5 w-3.5" />
                   <span>Edit</span>
@@ -381,9 +395,24 @@ export const CustomerDetailModal = ({ isOpen, onClose, customer: initialCustomer
                             by {call.salesEmployeeName}
                           </span>
                         </div>
-                        <span className="text-[11px] text-slate-400">
-                          {formatDate(call.callDate)} at {call.callTime}
-                        </span>
+                        
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-slate-400">
+                            {formatDate(call.callDate)} at {call.callTime}
+                          </span>
+
+                          {/* Direct Delete Call Button for Admin */}
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => setCallToDelete(call)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
+                              title="Delete this call record / audio"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       <p className="text-xs text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
@@ -445,6 +474,17 @@ export const CustomerDetailModal = ({ isOpen, onClose, customer: initialCustomer
         onClose={() => setIsCallModalOpen(false)}
         customer={customer}
         onCallLogged={handleCallLogged}
+      />
+
+      {/* Delete Call Recording Confirm Modal for Admin */}
+      <ConfirmModal
+        isOpen={!!callToDelete}
+        onClose={() => setCallToDelete(null)}
+        onConfirm={handleDeleteCall}
+        title="Delete Call Interaction"
+        message={`Are you sure you want to permanently delete this call interaction (${callToDelete?.callResult}) for customer "${customer?.customerName}"? Any attached audio recording will be erased.`}
+        confirmText={isDeletingCall ? 'Deleting...' : 'Delete Permanently'}
+        type="danger"
       />
     </>
   );

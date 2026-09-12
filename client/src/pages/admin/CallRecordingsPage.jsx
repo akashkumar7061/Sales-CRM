@@ -337,9 +337,9 @@ export const CallRecordingsPage = () => {
                   </div>
                 </div>
 
-                {/* Built-in Audio Player Component */}
-                <div className="w-full lg:w-96 shrink-0 flex items-center gap-2">
-                  <div className="flex-1">
+                {/* Built-in Audio Player Component & Admin Delete Action */}
+                <div className="w-full lg:w-auto shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                  <div className="w-full sm:w-80 lg:w-96">
                     <AudioPlayer
                       src={rec.recordingUrl}
                       fileName={rec.recordingFileName || 'Customer_Call_Recording.mp3'}
@@ -347,14 +347,15 @@ export const CallRecordingsPage = () => {
                     />
                   </div>
 
-                  {/* Delete button */}
+                  {/* Prominent Direct Delete Button for Admin (bina sunne bhi direct delete) */}
                   <button
                     type="button"
                     onClick={() => setRecordingToDelete(rec)}
-                    className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors shrink-0"
-                    title="Delete recording"
+                    className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white border border-rose-200 dark:border-rose-800/60 transition-all font-bold text-xs shadow-xs shrink-0 active:scale-95 cursor-pointer"
+                    title="Delete call recording from database"
                   >
                     <Trash2 className="h-4 w-4" />
+                    <span>Delete</span>
                   </button>
                 </div>
               </div>
