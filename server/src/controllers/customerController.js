@@ -5,6 +5,7 @@ const Notification = require('../models/Notification');
 const { createLog } = require('../utils/logger');
 const fs = require('fs');
 const path = require('path');
+const { saveFileToGridFS, deleteFileFromGridFS } = require('../utils/gridfsStorage');
 
 // @desc    Get customers (Filtered by role, priority, status, date, overdue, etc.)
 // @route   GET /api/customers
@@ -358,6 +359,20 @@ exports.createCustomer = async (req, res) => {
     // If audio call recording file was attached during customer creation
     if (req.file) {
       const recordingUrl = `/uploads/recordings/${req.file.filename}`;
+      let gridFsFileId = null;
+
+      try {
+        gridFsFileId = await saveFileToGridFS(req.file.path, req.file.filename, {
+          customerId: customer._id,
+          customerName: customer.customerName,
+          mobileNumber: customer.mobileNumber,
+          uploadedBy: req.user._id,
+          originalName: req.file.originalname,
+        });
+      } catch (gridErr) {
+        console.warn('GridFS save warning:', gridErr);
+      }
+
       await CallHistory.create({
         customerId: customer._id,
         userId: req.user._id,
@@ -373,6 +388,7 @@ exports.createCustomer = async (req, res) => {
         recordingMimeType: req.file.mimetype,
         recordingDuration: req.body.recordingDuration || '',
         hasRecording: true,
+        gridFsFileId,
         callDate: new Date(),
         callTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       });
@@ -562,6 +578,20 @@ exports.updateCustomer = async (req, res) => {
     // If audio call recording file was attached during customer update
     if (req.file) {
       const recordingUrl = `/uploads/recordings/${req.file.filename}`;
+      let gridFsFileId = null;
+
+      try {
+        gridFsFileId = await saveFileToGridFS(req.file.path, req.file.filename, {
+          customerId: customer._id,
+          customerName: customer.customerName,
+          mobileNumber: customer.mobileNumber,
+          uploadedBy: req.user._id,
+          originalName: req.file.originalname,
+        });
+      } catch (gridErr) {
+        console.warn('GridFS save warning:', gridErr);
+      }
+
       await CallHistory.create({
         customerId: customer._id,
         userId: req.user._id,
@@ -577,6 +607,7 @@ exports.updateCustomer = async (req, res) => {
         recordingMimeType: req.file.mimetype,
         recordingDuration: req.body.recordingDuration || '',
         hasRecording: true,
+        gridFsFileId,
         callDate: new Date(),
         callTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       });
@@ -639,6 +670,18 @@ exports.uploadCustomerDocument = async (req, res) => {
 
     const { docType = 'Other' } = req.body;
     const fileUrl = `/uploads/documents/${req.file.filename}`;
+
+    // Backup to GridFS cloud storage
+    try {
+      await saveFileToGridFS(req.file.path, req.file.filename, {
+        customerId: customer._id,
+        customerName: customer.customerName,
+        docType,
+        originalName: req.file.originalname,
+      });
+    } catch (gridErr) {
+      console.warn('GridFS doc backup warning:', gridErr);
+    }
 
     const newDoc = {
       fileName: req.file.filename,
@@ -709,6 +752,13 @@ exports.deleteCustomerDocument = async (req, res) => {
       } catch (err) {
         console.error('Failed to unlink file:', err);
       }
+    }
+
+    // Delete from GridFS cloud storage
+    try {
+      await deleteFileFromGridFS(doc.fileName);
+    } catch (gridErr) {
+      console.warn('GridFS doc delete warning:', gridErr);
     }
 
     const docName = doc.originalName;

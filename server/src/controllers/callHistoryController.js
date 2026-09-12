@@ -4,6 +4,7 @@ const ActivityLog = require('../models/ActivityLog');
 const Notification = require('../models/Notification');
 const fs = require('fs');
 const path = require('path');
+const { saveFileToGridFS, deleteFileFromGridFS, streamFileFromGridFS } = require('../utils/gridfsStorage');
 
 // Safe date parser helper
 const parseSafeDate = (d, fallback = null) => {
@@ -41,6 +42,7 @@ exports.logCall = async (req, res) => {
     let recordingFileSize = 0;
     let recordingMimeType = '';
     let hasRecording = false;
+    let gridFsFileId = null;
 
     if (req.file) {
       recordingUrl = `/uploads/recordings/${req.file.filename}`;
@@ -48,6 +50,19 @@ exports.logCall = async (req, res) => {
       recordingFileSize = req.file.size;
       recordingMimeType = req.file.mimetype;
       hasRecording = true;
+
+      // Permanent MongoDB cloud storage backup
+      try {
+        gridFsFileId = await saveFileToGridFS(req.file.path, req.file.filename, {
+          customerId: customer._id,
+          customerName: customer.customerName,
+          mobileNumber: customer.mobileNumber,
+          uploadedBy: req.user._id,
+          originalName: req.file.originalname,
+        });
+      } catch (gridErr) {
+        console.warn('GridFS backup warning:', gridErr);
+      }
     }
 
     const safeCallDate = parseSafeDate(callDate, new Date());
@@ -229,6 +244,19 @@ exports.uploadRecording = async (req, res) => {
     const recordingMimeType = req.file.mimetype;
     const safeCallDate = parseSafeDate(callDate, new Date());
 
+    let gridFsFileId = null;
+    try {
+      gridFsFileId = await saveFileToGridFS(req.file.path, req.file.filename, {
+        customerId: customer._id,
+        customerName: customer.customerName,
+        mobileNumber: customer.mobileNumber,
+        uploadedBy: req.user._id,
+        originalName: req.file.originalname,
+      });
+    } catch (gridErr) {
+      console.warn('GridFS save warning:', gridErr);
+    }
+
     const callLog = await CallHistory.create({
       customerId: customer._id,
       customerName: customer.customerName || 'Customer',
@@ -249,6 +277,7 @@ exports.uploadRecording = async (req, res) => {
       recordingMimeType,
       recordingDuration: recordingDuration || '',
       hasRecording: true,
+      gridFsFileId,
     });
 
     // Append to customer timeline
@@ -477,6 +506,7 @@ exports.deleteRecording = async (req, res) => {
 
     // Try deleting physical audio file if exists
     if (recording.recordingUrl) {
+      const filename = path.basename(recording.recordingUrl);
       const filePath = path.join(__dirname, '../../', recording.recordingUrl);
       if (fs.existsSync(filePath)) {
         try {
@@ -484,6 +514,13 @@ exports.deleteRecording = async (req, res) => {
         } catch (unlinkErr) {
           console.warn('Could not delete audio file from disk:', unlinkErr.message);
         }
+      }
+
+      // Delete from MongoDB Cloud GridFS permanently
+      try {
+        await deleteFileFromGridFS(filename);
+      } catch (gridErr) {
+        console.warn('GridFS delete error:', gridErr);
       }
     }
 
@@ -506,7 +543,7 @@ exports.deleteRecording = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Call recording deleted successfully.',
+      message: 'Call recording deleted permanently.',
     });
   } catch (error) {
     console.error('Delete Recording Error:', error);
@@ -514,7 +551,7 @@ exports.deleteRecording = async (req, res) => {
   }
 };
 
-// @desc    Download audio recording file
+// @desc    Download audio recording file (with GridFS fallback)
 // @route   GET /api/calls/recordings/:id/download
 // @access  Private
 exports.downloadRecordingFile = async (req, res) => {
@@ -524,13 +561,19 @@ exports.downloadRecordingFile = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Recording audio file not found.' });
     }
 
+    const filename = path.basename(recording.recordingUrl);
     const filePath = path.join(__dirname, '../../', recording.recordingUrl);
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ success: false, message: 'Audio file not found on disk.' });
+    const downloadName = recording.recordingFileName || `recording_${recording._id}.mp3`;
+
+    if (fs.existsSync(filePath)) {
+      return res.download(filePath, downloadName);
     }
 
-    const downloadName = recording.recordingFileName || `recording_${recording._id}.mp3`;
-    res.download(filePath, downloadName);
+    // Fallback to GridFS
+    const streamed = await streamFileFromGridFS(filename, req, res, recording.recordingMimeType || 'audio/mpeg');
+    if (!streamed) {
+      return res.status(404).json({ success: false, message: 'Audio file not found on disk or database.' });
+    }
   } catch (error) {
     console.error('Download recording error:', error);
     res.status(500).json({ success: false, message: 'Error downloading recording file.', error: error.message });

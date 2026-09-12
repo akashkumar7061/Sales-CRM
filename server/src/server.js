@@ -59,8 +59,10 @@ const MIME_MAP = {
   '.webp': 'image/webp',
 };
 
-// Resilient byte-range static audio & file server middleware
-const serveUploads = (req, res, next) => {
+const { streamFileFromGridFS, restoreFileFromGridFS } = require('./utils/gridfsStorage');
+
+// Resilient byte-range static audio & file server middleware with GridFS cloud fallback
+const serveUploads = async (req, res, next) => {
   let subPath = req.path;
   if (!subPath || subPath === '/') {
     return res.status(404).json({ success: false, message: 'Upload path is required.' });
@@ -68,6 +70,7 @@ const serveUploads = (req, res, next) => {
 
   // Normalize path & prevent path traversal
   const safeSubPath = path.normalize(subPath).replace(/^(\.\.[\/\\])+/, '');
+  const filename = path.basename(safeSubPath);
 
   // Look in server/uploads first, then root/uploads
   let filePath = path.join(__dirname, '../uploads', safeSubPath);
@@ -75,54 +78,66 @@ const serveUploads = (req, res, next) => {
     filePath = path.join(__dirname, '../../uploads', safeSubPath);
   }
 
-  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-    return res.status(404).json({
-      success: false,
-      message: `File not found on server: ${req.originalUrl}`,
-    });
-  }
-
-  const stat = fs.statSync(filePath);
-  const fileSize = stat.size;
-  const ext = path.extname(filePath).toLowerCase();
+  const ext = path.extname(safeSubPath).toLowerCase();
   const contentType = MIME_MAP[ext] || 'application/octet-stream';
 
-  const range = req.headers.range;
+  // If file exists on disk, stream directly with byte-range support
+  if (fs.existsSync(filePath) && !fs.statSync(filePath).isDirectory()) {
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
 
-  if (range) {
-    // 206 Partial Content for byte-range seeking (iOS Safari, mobile Chrome)
-    const parts = range.replace(/bytes=/, '').split('-');
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    if (range) {
+      // 206 Partial Content for byte-range seeking (iOS Safari, mobile Chrome)
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
 
-    if (start >= fileSize || end >= fileSize) {
-      res.status(416).set({ 'Content-Range': `bytes */${fileSize}` });
-      return res.end();
+      if (start >= fileSize || end >= fileSize) {
+        res.status(416).set({ 'Content-Range': `bytes */${fileSize}` });
+        return res.end();
+      }
+
+      const chunkSize = end - start + 1;
+      const stream = fs.createReadStream(filePath, { start, end });
+
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': contentType,
+        'Content-Disposition': 'inline',
+        'Cache-Control': 'public, max-age=2592000',
+      });
+      return stream.pipe(res);
+    } else {
+      // 200 Full content streaming
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Accept-Ranges': 'bytes',
+        'Content-Type': contentType,
+        'Content-Disposition': 'inline',
+        'Cache-Control': 'public, max-age=2592000',
+      });
+      return fs.createReadStream(filePath).pipe(res);
     }
-
-    const chunkSize = end - start + 1;
-    const stream = fs.createReadStream(filePath, { start, end });
-
-    res.writeHead(206, {
-      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-      'Accept-Ranges': 'bytes',
-      'Content-Length': chunkSize,
-      'Content-Type': contentType,
-      'Content-Disposition': 'inline',
-      'Cache-Control': 'public, max-age=2592000',
-    });
-    stream.pipe(res);
-  } else {
-    // 200 Full content streaming
-    res.writeHead(200, {
-      'Content-Length': fileSize,
-      'Accept-Ranges': 'bytes',
-      'Content-Type': contentType,
-      'Content-Disposition': 'inline',
-      'Cache-Control': 'public, max-age=2592000',
-    });
-    fs.createReadStream(filePath).pipe(res);
   }
+
+  // Fallback to MongoDB Cloud GridFS (Permanent Cloud Database Storage)
+  try {
+    const streamed = await streamFileFromGridFS(filename, req, res, contentType);
+    if (streamed) {
+      restoreFileFromGridFS(filename, filePath).catch(() => {});
+      return;
+    }
+  } catch (gridErr) {
+    console.warn('GridFS stream fallback warning:', gridErr);
+  }
+
+  return res.status(404).json({
+    success: false,
+    message: `Audio file not found on server or database: ${req.originalUrl}`,
+  });
 };
 
 // Serve static uploaded files across /uploads and /api/uploads

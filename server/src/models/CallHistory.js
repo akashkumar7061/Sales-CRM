@@ -91,6 +91,10 @@ const callHistorySchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    gridFsFileId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
   },
   {
     timestamps: true,
