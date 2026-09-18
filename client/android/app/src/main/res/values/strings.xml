@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sales CRM</string>
+    <string name="title_activity_main">Sales CRM</string>
+    <string name="package_name">com.salescrm.app</string>
+    <string name="custom_url_scheme">com.salescrm.app</string>
+</resources>

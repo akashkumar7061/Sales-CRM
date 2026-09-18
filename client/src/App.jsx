@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ProtectedRoute } from './components/routes/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
+import { MobileAppBridge } from './components/common/MobileAppBridge';
 
 // Auth Pages (Lazy Loaded)
 const LoginPage = lazy(() =>
@@ -91,6 +92,7 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
+          <MobileAppBridge />
           <Toaster
             position="top-right"
             toastOptions={{
