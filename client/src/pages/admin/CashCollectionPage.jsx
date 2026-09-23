@@ -943,13 +943,8 @@ export const CashCollectionPage = () => {
             setEditingItem(null);
           }}
           onSuccess={fetchCollections}
-          editData={
-            editingItem
-              ? editingItem
-              : modalInitialType === 'Expense'
-              ? { type: 'Expense', category: 'Fuel & Travel' }
-              : { type: 'Collection', category: 'General' }
-          }
+          initialType={modalInitialType}
+          editData={editingItem}
           employees={employees}
         />
       )}

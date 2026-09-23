@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const CashCollection = require('../models/CashCollection');
 const User = require('../models/User');
 const ActivityLog = require('../models/ActivityLog');
@@ -364,6 +365,10 @@ exports.getCollections = async (req, res) => {
 // @access  Private (Admin only)
 exports.getCollectionById = async (req, res) => {
   try {
+    if (!req.params.id || !mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid cash entry ID.' });
+    }
+
     const collection = await CashCollection.findById(req.params.id)
       .populate('employeeId', 'name email designation phone avatarColor')
       .populate('collectedByAdminId', 'name email');
@@ -386,6 +391,10 @@ exports.getCollectionById = async (req, res) => {
 // @access  Private (Admin only)
 exports.updateCollection = async (req, res) => {
   try {
+    if (!req.params.id || !mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid cash entry ID.' });
+    }
+
     const collection = await CashCollection.findById(req.params.id);
     if (!collection) {
       return res.status(404).json({ success: false, message: 'Collection entry not found.' });
@@ -456,6 +465,10 @@ exports.updateCollection = async (req, res) => {
 // @access  Private (Admin only)
 exports.deleteCollection = async (req, res) => {
   try {
+    if (!req.params.id || !mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid cash entry ID.' });
+    }
+
     const collection = await CashCollection.findById(req.params.id);
     if (!collection) {
       return res.status(404).json({ success: false, message: 'Entry not found.' });

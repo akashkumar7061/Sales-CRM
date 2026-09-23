@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
@@ -27,10 +27,19 @@ const EXPENSE_CATEGORIES = [
   { id: 'Office & Miscellaneous', label: '📦 Office & Miscellaneous' },
 ];
 
-export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = null, employees = [] }) => {
+export const CashCollectionModal = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  initialType = 'Collection',
+  editData = null,
+  employees = [],
+}) => {
+  const isEditing = Boolean(editData && editData._id);
+
   const [formData, setFormData] = useState({
-    type: 'Collection', // 'Collection' (Cash In +) or 'Expense' (Cash Out -)
-    category: 'General',
+    type: initialType || 'Collection',
+    category: initialType === 'Expense' ? 'Fuel & Travel' : 'General',
     employeeId: '',
     employeeName: '',
     date: new Date().toISOString().split('T')[0],
@@ -46,13 +55,15 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (editData) {
+    if (isEditing) {
       setFormData({
         type: editData.type || 'Collection',
         category: editData.category || (editData.type === 'Expense' ? 'Fuel & Travel' : 'General'),
         employeeId: editData.employeeId?._id || editData.employeeId || '',
         employeeName: editData.employeeName || editData.employeeId?.name || '',
-        date: editData.date ? new Date(editData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        date: editData.date
+          ? new Date(editData.date).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0],
         amount: editData.amount || '',
         paymentMode: editData.paymentMode || 'Cash',
         companyName: editData.companyName || 'SofaShine',
@@ -62,9 +73,10 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
         notes: editData.notes || '',
       });
     } else {
+      const defaultType = initialType === 'Expense' ? 'Expense' : 'Collection';
       setFormData({
-        type: 'Collection',
-        category: 'General',
+        type: defaultType,
+        category: defaultType === 'Expense' ? 'Fuel & Travel' : 'General',
         employeeId: '',
         employeeName: '',
         date: new Date().toISOString().split('T')[0],
@@ -77,7 +89,7 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
         notes: '',
       });
     }
-  }, [editData, isOpen]);
+  }, [editData, initialType, isOpen, isEditing]);
 
   const isExpense = formData.type === 'Expense';
 
@@ -96,7 +108,12 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
     setFormData((prev) => ({
       ...prev,
       type: selectedType,
-      category: selectedType === 'Expense' ? (prev.category === 'General' ? 'Fuel & Travel' : prev.category) : 'General',
+      category:
+        selectedType === 'Expense'
+          ? prev.category === 'General'
+            ? 'Fuel & Travel'
+            : prev.category
+          : 'General',
     }));
   };
 
@@ -104,7 +121,9 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
     e.preventDefault();
 
     if (!formData.employeeName || !formData.employeeName.trim()) {
-      toast.error(isExpense ? 'Please enter Worker / Payee name.' : 'Please enter Worker / Sales Employee name.');
+      toast.error(
+        isExpense ? 'Please enter Worker / Payee name.' : 'Please enter Worker / Sales Employee name.'
+      );
       return;
     }
 
@@ -122,7 +141,7 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
         amount: numAmount,
       };
 
-      if (editData) {
+      if (isEditing) {
         const res = await api.put(`/cash-collections/${editData._id}`, payload);
         if (res.data.success) {
           toast.success(res.data.message || 'Entry updated successfully!');
@@ -132,7 +151,10 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
       } else {
         const res = await api.post('/cash-collections', payload);
         if (res.data.success) {
-          toast.success(res.data.message || (isExpense ? 'Cash expense recorded & deducted!' : 'Cash collection recorded!'));
+          toast.success(
+            res.data.message ||
+              (isExpense ? 'Cash expense recorded & deducted!' : 'Cash collection recorded!')
+          );
           onSuccess();
           onClose();
         }
@@ -150,9 +172,13 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
       isOpen={isOpen}
       onClose={onClose}
       title={
-        editData
-          ? isExpense ? '✏️ Edit Cash Expense Entry' : '✏️ Edit Cash Collection Entry'
-          : isExpense ? '🔻 Record Cash Out / Expense (खर्च)' : '💵 Record Cash In / Collection (जमा)'
+        isEditing
+          ? isExpense
+            ? '✏️ Edit Cash Expense Entry'
+            : '✏️ Edit Cash Collection Entry'
+          : isExpense
+          ? '🔻 Record Cash Out / Expense (खर्च)'
+          : '💵 Record Cash In / Collection (जमा)'
       }
       maxWidth="max-w-2xl"
     >
@@ -204,14 +230,16 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
               <>
                 <TrendingDown className="h-4 w-4 shrink-0 text-rose-500" />
                 <span>
-                  <strong>Cash Out / Expense:</strong> Yeh amount Total Cash Balance me se <strong>minus (ghat)</strong> ho jayega.
+                  <strong>Cash Out / Expense:</strong> Yeh amount Total Cash Balance me se{' '}
+                  <strong>minus (ghat)</strong> ho jayega.
                 </span>
               </>
             ) : (
               <>
                 <TrendingUp className="h-4 w-4 shrink-0 text-emerald-500" />
                 <span>
-                  <strong>Cash In / Collection:</strong> Yeh amount Worker se mila cash Total Collection me <strong>add (jud)</strong> ho jayega.
+                  <strong>Cash In / Collection:</strong> Yeh amount Worker se mila cash Total Collection me{' '}
+                  <strong>add (jud)</strong> ho jayega.
                 </span>
               </>
             )}
@@ -224,13 +252,18 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
               <User className={`h-3.5 w-3.5 ${isExpense ? 'text-rose-500' : 'text-indigo-500'}`} />
-              {isExpense ? 'Worker / Payee / Spent By' : 'Worker / Sales Employee Name'} <span className="text-rose-500">*</span>
+              {isExpense ? 'Worker / Payee / Spent By' : 'Worker / Sales Employee Name'}{' '}
+              <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
               <input
                 type="text"
                 list="workers-list"
-                placeholder={isExpense ? "Worker/Person who spent (e.g. Ramesh, Driver...)" : "Type worker name (e.g. Ramesh, Suraj...)"}
+                placeholder={
+                  isExpense
+                    ? 'Worker/Person who spent (e.g. Ramesh, Driver...)'
+                    : 'Type worker name (e.g. Ramesh, Suraj...)'
+                }
                 value={formData.employeeName}
                 onChange={(e) => handleNameChange(e.target.value)}
                 required
@@ -264,7 +297,8 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
               <Calendar className="h-3.5 w-3.5 text-indigo-500" />
-              {isExpense ? 'Expense / Spent Date' : 'Collection Date'} <span className="text-rose-500">*</span>
+              {isExpense ? 'Expense / Spent Date' : 'Collection Date'}{' '}
+              <span className="text-rose-500">*</span>
             </label>
             <input
               type="date"
@@ -302,13 +336,18 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
           {/* Amount */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-              <IndianRupee className={`h-3.5 w-3.5 ${isExpense ? 'text-rose-500' : 'text-emerald-500'}`} />
-              {isExpense ? 'Cash Used / Spent Amount (₹)' : 'Amount Collected (₹)'} <span className="text-rose-500">*</span>
+              <IndianRupee
+                className={`h-3.5 w-3.5 ${isExpense ? 'text-rose-500' : 'text-emerald-500'}`}
+              />
+              {isExpense ? 'Cash Used / Spent Amount (₹)' : 'Amount Collected (₹)'}{' '}
+              <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
-              <span className={`absolute inset-y-0 left-0 flex items-center pl-3.5 font-bold text-base ${
-                isExpense ? 'text-rose-500' : 'text-emerald-500'
-              }`}>
+              <span
+                className={`absolute inset-y-0 left-0 flex items-center pl-3.5 font-bold text-base ${
+                  isExpense ? 'text-rose-500' : 'text-emerald-500'
+                }`}
+              >
                 {isExpense ? '- ₹' : '+ ₹'}
               </span>
               <input
@@ -327,8 +366,13 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
               />
             </div>
             {formData.amount && Number(formData.amount) > 0 && (
-              <p className={`mt-1 text-xs font-bold ${isExpense ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                {isExpense ? 'Deducting:' : 'Adding:'} {isExpense ? '- ₹' : '+ ₹'}{Number(formData.amount).toLocaleString('en-IN')}
+              <p
+                className={`mt-1 text-xs font-bold ${
+                  isExpense ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
+                }`}
+              >
+                {isExpense ? 'Deducting:' : 'Adding:'} {isExpense ? '- ₹' : '+ ₹'}
+                {Number(formData.amount).toLocaleString('en-IN')}
               </p>
             )}
           </div>
@@ -400,11 +444,12 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
               <Receipt className="h-3.5 w-3.5 text-slate-400" />
-              {isExpense ? 'Bill / Voucher / Receipt #' : 'Receipt / Voucher #'} <span className="text-slate-400 text-[10px] font-normal">(Optional)</span>
+              {isExpense ? 'Bill / Voucher / Receipt #' : 'Receipt / Voucher #'}{' '}
+              <span className="text-slate-400 text-[10px] font-normal">(Optional)</span>
             </label>
             <input
               type="text"
-              placeholder={isExpense ? "e.g. PETROL-1029" : "e.g. REC-84920"}
+              placeholder={isExpense ? 'e.g. PETROL-1029' : 'e.g. REC-84920'}
               value={formData.receiptNo}
               onChange={(e) => setFormData({ ...formData, receiptNo: e.target.value })}
               className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
@@ -414,11 +459,16 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
               <FileText className="h-3.5 w-3.5 text-slate-400" />
-              {isExpense ? 'Vendor / Item Details' : 'Customer / Order Ref'} <span className="text-slate-400 text-[10px] font-normal">(Optional)</span>
+              {isExpense ? 'Vendor / Item Details' : 'Customer / Order Ref'}{' '}
+              <span className="text-slate-400 text-[10px] font-normal">(Optional)</span>
             </label>
             <input
               type="text"
-              placeholder={isExpense ? "e.g. HP Petrol Pump, Shampoo 5L" : "e.g. Rahul Sharma - Sofa Cleaning"}
+              placeholder={
+                isExpense
+                  ? 'e.g. HP Petrol Pump, Shampoo 5L'
+                  : 'e.g. Rahul Sharma - Sofa Cleaning'
+              }
               value={formData.customerReference}
               onChange={(e) => setFormData({ ...formData, customerReference: e.target.value })}
               className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
@@ -429,14 +479,15 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
         {/* Remarks / Notes */}
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-            {isExpense ? 'Expense Details / Reason' : 'Remarks / Collection Notes'} <span className="text-slate-400 text-[10px] font-normal">(Optional)</span>
+            {isExpense ? 'Expense Details / Reason' : 'Remarks / Collection Notes'}{' '}
+            <span className="text-slate-400 text-[10px] font-normal">(Optional)</span>
           </label>
           <textarea
             rows="2"
             placeholder={
               isExpense
-                ? "Describe what the cash was spent on (e.g. purchased cleaning sponge and auto fare for 2 workers)..."
-                : "Add any specific notes regarding this cash collection..."
+                ? 'Describe what the cash was spent on (e.g. purchased cleaning sponge and auto fare for 2 workers)...'
+                : 'Add any specific notes regarding this cash collection...'
             }
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -465,7 +516,7 @@ export const CashCollectionModal = ({ isOpen, onClose, onSuccess, editData = nul
           >
             {loading ? (
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-            ) : editData ? (
+            ) : isEditing ? (
               'Save Changes'
             ) : isExpense ? (
               '🔻 Record Cash Out (Deduct)'
