@@ -22,8 +22,19 @@ const CashCollectionSchema = new mongoose.Schema(
     },
     amount: {
       type: Number,
-      required: [true, 'Collected amount is required'],
+      required: [true, 'Amount is required'],
       min: [0, 'Amount cannot be negative'],
+    },
+    type: {
+      type: String,
+      enum: ['Collection', 'Expense'],
+      default: 'Collection',
+      index: true,
+    },
+    category: {
+      type: String,
+      trim: true,
+      default: 'General',
     },
     paymentMode: {
       type: String,

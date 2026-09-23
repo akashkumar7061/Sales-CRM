@@ -9,7 +9,7 @@ const safeNumber = (val, defaultVal = 0) => {
   return isNaN(num) ? defaultVal : Math.max(0, num);
 };
 
-// @desc    Record a new cash/payment collection from a worker
+// @desc    Record a new cash/payment collection or expense from a worker
 // @route   POST /api/cash-collections
 // @access  Private (Admin only)
 exports.createCollection = async (req, res) => {
@@ -19,6 +19,8 @@ exports.createCollection = async (req, res) => {
       employeeId,
       employeeName,
       amount,
+      type = 'Collection',
+      category = 'General',
       paymentMode = 'Cash',
       companyName = 'SofaShine',
       customerReference = '',
@@ -37,14 +39,17 @@ exports.createCollection = async (req, res) => {
     }
 
     if (!finalEmployeeName) {
-      return res.status(400).json({ success: false, message: 'Please enter Worker / Sales Employee name.' });
+      return res.status(400).json({ success: false, message: 'Please enter Worker / Sales Employee / Payee name.' });
     }
 
     const parsedAmount = safeNumber(amount, 0);
     if (parsedAmount <= 0) {
-      return res.status(400).json({ success: false, message: 'Amount collected must be greater than 0.' });
+      return res.status(400).json({ success: false, message: 'Amount must be greater than 0.' });
     }
 
+    const isExpense = type === 'Expense';
+    const finalType = isExpense ? 'Expense' : 'Collection';
+    const finalCategory = (category || (isExpense ? 'General Expense' : 'Collection')).trim();
     const collectionDate = date ? new Date(date) : new Date();
 
     const collection = await CashCollection.create({
@@ -52,6 +57,8 @@ exports.createCollection = async (req, res) => {
       employeeId: employeeId || undefined,
       employeeName: finalEmployeeName,
       amount: parsedAmount,
+      type: finalType,
+      category: finalCategory,
       paymentMode,
       companyName,
       customerReference: customerReference.trim(),
@@ -64,14 +71,18 @@ exports.createCollection = async (req, res) => {
 
     // Log activity
     try {
+      const actionText = isExpense
+        ? `Recorded cash expense / deduction of ₹${parsedAmount.toLocaleString('en-IN')} for ${finalEmployeeName} (${finalCategory}, ${paymentMode}, ${companyName}).`
+        : `Recorded ₹${parsedAmount.toLocaleString('en-IN')} cash collection from ${finalEmployeeName} (${paymentMode}, ${companyName}).`;
+
       await ActivityLog.create({
         userId: req.user._id,
         userName: req.user.name || 'Admin',
         userRole: req.user.role || 'admin',
-        action: 'RECORD_CASH_COLLECTION',
+        action: isExpense ? 'RECORD_CASH_EXPENSE' : 'RECORD_CASH_COLLECTION',
         targetId: collection._id,
         targetModel: 'CashCollection',
-        details: `Recorded ₹${parsedAmount.toLocaleString('en-IN')} cash collection from ${finalEmployeeName} (${paymentMode}, ${companyName}).`,
+        details: actionText,
       });
     } catch (actErr) {
       console.warn('Activity log error:', actErr);
@@ -79,19 +90,21 @@ exports.createCollection = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: `Cash collection of ₹${parsedAmount.toLocaleString('en-IN')} recorded successfully!`,
+      message: isExpense
+        ? `Cash expense of ₹${parsedAmount.toLocaleString('en-IN')} recorded & deducted successfully!`
+        : `Cash collection of ₹${parsedAmount.toLocaleString('en-IN')} recorded successfully!`,
       collection,
     });
   } catch (error) {
-    console.error('Create Cash Collection Error:', error);
+    console.error('Create Cash Entry Error:', error);
     res.status(500).json({
       success: false,
-      message: error.message || 'Failed to record cash collection.',
+      message: error.message || 'Failed to record cash entry.',
     });
   }
 };
 
-// @desc    Get all cash collections with metrics, filters, and pagination
+// @desc    Get all cash collections & expenses with net balance metrics, filters, and pagination
 // @route   GET /api/cash-collections
 // @access  Private (Admin only)
 exports.getCollections = async (req, res) => {
@@ -102,11 +115,21 @@ exports.getCollections = async (req, res) => {
 
     const query = {};
 
+    // Filter by Type (Collection / Expense / all)
+    if (req.query.type && req.query.type !== 'all') {
+      query.type = req.query.type;
+    }
+
     // Filter by Worker Name or ID
     if (req.query.workerName && req.query.workerName !== 'all') {
       query.employeeName = req.query.workerName;
     } else if (req.query.employeeId && req.query.employeeId !== 'all') {
       query.employeeId = req.query.employeeId;
+    }
+
+    // Filter by Category
+    if (req.query.category && req.query.category !== 'all') {
+      query.category = req.query.category;
     }
 
     // Filter by Company
@@ -150,6 +173,7 @@ exports.getCollections = async (req, res) => {
       const regex = new RegExp(req.query.search.trim(), 'i');
       query.$or = [
         { employeeName: regex },
+        { category: regex },
         { receiptNo: regex },
         { customerReference: regex },
         { notes: regex },
@@ -165,19 +189,40 @@ exports.getCollections = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-    // 2. Aggregate Metrics (Total for current filter)
+    // 2. Aggregate Metrics (Total Collected, Total Expense, Net Balance for current filter)
     const aggregateMetrics = await CashCollection.aggregate([
       { $match: query },
       {
         $group: {
           _id: null,
-          totalCollected: { $sum: '$amount' },
+          totalCollected: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'Expense'] }, 0, '$amount'],
+            },
+          },
+          totalExpense: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'Expense'] }, '$amount', 0],
+            },
+          },
           count: { $sum: 1 },
+          collectionCount: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'Expense'] }, 0, 1],
+            },
+          },
+          expenseCount: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'Expense'] }, 1, 0],
+            },
+          },
         },
       },
     ]);
 
-    const totalFilteredAmount = aggregateMetrics[0]?.totalCollected || 0;
+    const totalCollected = aggregateMetrics[0]?.totalCollected || 0;
+    const totalExpense = aggregateMetrics[0]?.totalExpense || 0;
+    const netBalance = totalCollected - totalExpense;
 
     // 3. Today's Total Metrics
     const startOfToday = new Date();
@@ -193,9 +238,26 @@ exports.getCollections = async (req, res) => {
 
     const todayMetrics = await CashCollection.aggregate([
       { $match: todayQuery },
-      { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
+      {
+        $group: {
+          _id: null,
+          collected: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'Expense'] }, 0, '$amount'],
+            },
+          },
+          expense: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'Expense'] }, '$amount', 0],
+            },
+          },
+          count: { $sum: 1 },
+        },
+      },
     ]);
-    const todayAmount = todayMetrics[0]?.total || 0;
+    const todayCollected = todayMetrics[0]?.collected || 0;
+    const todayExpense = todayMetrics[0]?.expense || 0;
+    const todayNet = todayCollected - todayExpense;
     const todayCount = todayMetrics[0]?.count || 0;
 
     // 4. This Month's Total Metrics
@@ -210,9 +272,26 @@ exports.getCollections = async (req, res) => {
 
     const monthMetrics = await CashCollection.aggregate([
       { $match: monthQuery },
-      { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
+      {
+        $group: {
+          _id: null,
+          collected: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'Expense'] }, 0, '$amount'],
+            },
+          },
+          expense: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'Expense'] }, '$amount', 0],
+            },
+          },
+          count: { $sum: 1 },
+        },
+      },
     ]);
-    const thisMonthAmount = monthMetrics[0]?.total || 0;
+    const thisMonthCollected = monthMetrics[0]?.collected || 0;
+    const thisMonthExpense = monthMetrics[0]?.expense || 0;
+    const thisMonthNet = thisMonthCollected - thisMonthExpense;
 
     // 5. Worker Breakdown for current filter (grouped by worker name)
     const workerBreakdown = await CashCollection.aggregate([
@@ -221,11 +300,25 @@ exports.getCollections = async (req, res) => {
         $group: {
           _id: '$employeeName',
           employeeName: { $first: '$employeeName' },
-          totalAmount: { $sum: '$amount' },
+          totalCollected: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'Expense'] }, 0, '$amount'],
+            },
+          },
+          totalExpense: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'Expense'] }, '$amount', 0],
+            },
+          },
           collectionsCount: { $sum: 1 },
         },
       },
-      { $sort: { totalAmount: -1 } },
+      {
+        $addFields: {
+          netAmount: { $subtract: ['$totalCollected', '$totalExpense'] },
+        },
+      },
+      { $sort: { netAmount: -1, totalCollected: -1 } },
       { $limit: 10 },
     ]);
 
@@ -238,10 +331,19 @@ exports.getCollections = async (req, res) => {
       page,
       pages: Math.ceil(total / limit) || 1,
       stats: {
-        totalFilteredAmount,
-        todayAmount,
+        totalCollected,
+        totalExpense,
+        netBalance,
+        totalFilteredAmount: netBalance,
+        todayCollected,
+        todayExpense,
+        todayNet,
+        todayAmount: todayNet,
         todayCount,
-        thisMonthAmount,
+        thisMonthCollected,
+        thisMonthExpense,
+        thisMonthNet,
+        thisMonthAmount: thisMonthNet,
         workerBreakdown,
         distinctWorkers: distinctWorkers.filter(Boolean).sort(),
       },
@@ -279,7 +381,7 @@ exports.getCollectionById = async (req, res) => {
   }
 };
 
-// @desc    Update a cash collection entry
+// @desc    Update a cash collection or expense entry
 // @route   PUT /api/cash-collections/:id
 // @access  Private (Admin only)
 exports.updateCollection = async (req, res) => {
@@ -294,6 +396,8 @@ exports.updateCollection = async (req, res) => {
       employeeId,
       employeeName,
       amount,
+      type,
+      category,
       paymentMode,
       companyName,
       customerReference,
@@ -303,9 +407,11 @@ exports.updateCollection = async (req, res) => {
     } = req.body;
 
     if (date) collection.date = new Date(date);
-    if (employeeId) collection.employeeId = employeeId;
-    if (employeeName) collection.employeeName = employeeName;
+    if (employeeId !== undefined) collection.employeeId = employeeId || undefined;
+    if (employeeName) collection.employeeName = employeeName.trim();
     if (amount !== undefined) collection.amount = safeNumber(amount, collection.amount);
+    if (type) collection.type = type === 'Expense' ? 'Expense' : 'Collection';
+    if (category !== undefined) collection.category = category.trim();
     if (paymentMode) collection.paymentMode = paymentMode;
     if (companyName) collection.companyName = companyName;
     if (customerReference !== undefined) collection.customerReference = customerReference.trim();
@@ -317,14 +423,15 @@ exports.updateCollection = async (req, res) => {
 
     // Log Activity
     try {
+      const isExp = collection.type === 'Expense';
       await ActivityLog.create({
         userId: req.user._id,
         userName: req.user.name || 'Admin',
         userRole: req.user.role || 'admin',
-        action: 'UPDATE_CASH_COLLECTION',
+        action: isExp ? 'UPDATE_CASH_EXPENSE' : 'UPDATE_CASH_COLLECTION',
         targetId: collection._id,
         targetModel: 'CashCollection',
-        details: `Updated cash collection entry for ${collection.employeeName} (₹${collection.amount.toLocaleString('en-IN')}).`,
+        details: `Updated ${isExp ? 'cash expense' : 'cash collection'} entry for ${collection.employeeName} (₹${collection.amount.toLocaleString('en-IN')}).`,
       });
     } catch (actErr) {
       console.warn('Activity log error:', actErr);
@@ -332,14 +439,14 @@ exports.updateCollection = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Cash collection entry updated successfully.',
+      message: 'Cash entry updated successfully.',
       collection,
     });
   } catch (error) {
-    console.error('Update Cash Collection Error:', error);
+    console.error('Update Cash Entry Error:', error);
     res.status(500).json({
       success: false,
-      message: error.message || 'Failed to update cash collection.',
+      message: error.message || 'Failed to update cash entry.',
     });
   }
 };
@@ -351,21 +458,22 @@ exports.deleteCollection = async (req, res) => {
   try {
     const collection = await CashCollection.findById(req.params.id);
     if (!collection) {
-      return res.status(404).json({ success: false, message: 'Collection entry not found.' });
+      return res.status(404).json({ success: false, message: 'Entry not found.' });
     }
 
     await CashCollection.findByIdAndDelete(req.params.id);
 
     // Log Activity
     try {
+      const isExp = collection.type === 'Expense';
       await ActivityLog.create({
         userId: req.user._id,
         userName: req.user.name || 'Admin',
         userRole: req.user.role || 'admin',
-        action: 'DELETE_CASH_COLLECTION',
+        action: isExp ? 'DELETE_CASH_EXPENSE' : 'DELETE_CASH_COLLECTION',
         targetId: req.params.id,
         targetModel: 'CashCollection',
-        details: `Deleted cash collection of ₹${collection.amount.toLocaleString('en-IN')} from ${collection.employeeName} on ${new Date(collection.date).toLocaleDateString()}.`,
+        details: `Deleted ${isExp ? 'cash expense' : 'cash collection'} of ₹${collection.amount.toLocaleString('en-IN')} for ${collection.employeeName}.`,
       });
     } catch (actErr) {
       console.warn('Activity log error:', actErr);
@@ -373,26 +481,34 @@ exports.deleteCollection = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Cash collection entry deleted successfully.',
+      message: 'Cash entry deleted successfully.',
     });
   } catch (error) {
-    console.error('Delete Cash Collection Error:', error);
+    console.error('Delete Cash Entry Error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to delete cash collection.',
+      message: 'Failed to delete cash entry.',
       error: error.message,
     });
   }
 };
 
-// @desc    Export all filtered cash collections (raw JSON for client CSV download)
+// @desc    Export all filtered cash collections & expenses
 // @route   GET /api/cash-collections/export/data
 // @access  Private (Admin only)
 exports.exportCollectionData = async (req, res) => {
   try {
     const query = {};
-    if (req.query.employeeId && req.query.employeeId !== 'all') {
+    if (req.query.type && req.query.type !== 'all') {
+      query.type = req.query.type;
+    }
+    if (req.query.employeeName && req.query.employeeName !== 'all') {
+      query.employeeName = req.query.employeeName;
+    } else if (req.query.employeeId && req.query.employeeId !== 'all') {
       query.employeeId = req.query.employeeId;
+    }
+    if (req.query.category && req.query.category !== 'all') {
+      query.category = req.query.category;
     }
     if (req.query.companyName && req.query.companyName !== 'all') {
       query.companyName = req.query.companyName;
@@ -423,3 +539,4 @@ exports.exportCollectionData = async (req, res) => {
     res.status(500).json({ success: false, message: 'Export failed.', error: error.message });
   }
 };
+
