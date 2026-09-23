@@ -295,6 +295,39 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
+      {/* Cash & Expenses Quick Ledger Banner */}
+      <div className="rounded-2xl border border-emerald-200/80 dark:border-emerald-500/20 bg-gradient-to-r from-emerald-50/90 via-white to-teal-50/40 dark:from-emerald-950/40 dark:via-slate-900 dark:to-teal-950/30 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-500/20">
+            <Wallet className="h-6 w-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                Daily Cash & Expenses Ledger (दैनिक जमा व खर्च)
+              </h3>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300">
+                Live
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Worker cash collections, daily expenses (fuel, supplies, refreshments), and automatic Net Cash Balance in hand.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Link
+            to="/admin/cash-collections"
+            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-4 py-2.5 text-xs font-black text-white shadow-md shadow-emerald-500/20 transition-all active:scale-95"
+          >
+            <Wallet className="h-4 w-4" />
+            <span>Open Cash Ledger & Hisab</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      </div>
+
       {/* Visual Charts Grid (Row 1) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Chart 1: Customer Records by Sales Employee */}

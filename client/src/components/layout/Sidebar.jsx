@@ -38,7 +38,7 @@ export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
       icon: UserCheck,
     },
     {
-      name: 'Daily Cash Collection',
+      name: 'Cash & Expenses Ledger',
       path: '/admin/cash-collections',
       icon: Wallet,
     },

@@ -28,6 +28,9 @@ import {
   Receipt,
   FileText,
   Tag,
+  PlusCircle,
+  MinusCircle,
+  Layers,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -53,7 +56,7 @@ export const CashCollectionPage = () => {
 
   // Filters
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all'); // all, Collection, Expense
+  const [typeFilter, setTypeFilter] = useState('all'); // 'all' | 'Collection' | 'Expense'
   const [workerFilter, setWorkerFilter] = useState('all');
   const [companyFilter, setCompanyFilter] = useState('all');
   const [paymentModeFilter, setPaymentModeFilter] = useState('all');
@@ -214,10 +217,10 @@ export const CashCollectionPage = () => {
         const headers = [
           'Date',
           'Transaction Type',
-          'Category',
+          'Category / Purpose',
           'Worker / Payee Name',
           'Amount (INR)',
-          'Net Cash Impact',
+          'Net Cash Effect',
           'Payment Mode',
           'Company',
           'Receipt / Voucher No',
@@ -234,7 +237,7 @@ export const CashCollectionPage = () => {
           const dateStr = r.date ? new Date(r.date).toLocaleDateString('en-IN') : '';
           const row = [
             `"${dateStr}"`,
-            `"${isExp ? 'Cash Out (Expense)' : 'Cash In (Collection)'}"`,
+            `"${isExp ? 'Cash Out (Expense/खर्च)' : 'Cash In (Collection/जमा)'}"`,
             `"${(r.category || (isExp ? 'General Expense' : 'Collection')).replace(/"/g, '""')}"`,
             `"${(r.employeeName || '').replace(/"/g, '""')}"`,
             r.amount || 0,
@@ -327,21 +330,21 @@ export const CashCollectionPage = () => {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 shadow-md shadow-emerald-500/20 text-white">
-              <Wallet className="h-5 w-5" />
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 shadow-md shadow-emerald-500/20 text-white">
+              <Wallet className="h-6 w-6" />
             </div>
             <div>
               <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
-                Daily Cash Ledger & Collection
+                Daily Cash & Expenses Ledger
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                Admin Panel • Track cash in, cash spent/deductions, and net cash balance in hand
+                Admin Panel • Track Worker Cash Collections, Cash Spent/Expenses, and Net Cash in Hand
               </p>
             </div>
           </div>
         </div>
 
-        {/* Top Actions */}
+        {/* Top Primary Actions */}
         <div className="flex flex-wrap items-center gap-2.5">
           <button
             onClick={fetchCollections}
@@ -359,32 +362,99 @@ export const CashCollectionPage = () => {
             <span>Export CSV</span>
           </button>
 
-          {/* Record Cash In (Collection) */}
+          {/* Record Cash In (Green Button) */}
           <button
             onClick={() => {
               setEditingItem(null);
               setModalInitialType('Collection');
               setIsAddModalOpen(true);
             }}
-            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-3.5 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-500/25 transition-all active:scale-[0.98]"
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-4 py-2.5 text-xs font-black text-white shadow-md shadow-emerald-500/25 transition-all active:scale-[0.98]"
           >
-            <Plus className="h-4 w-4" />
-            <span>+ Cash In (जमा)</span>
+            <PlusCircle className="h-4 w-4" />
+            <span>+ Record Cash In (जमा)</span>
           </button>
 
-          {/* Record Cash Out (Expense / Deduction) */}
+          {/* Record Cash Out / Expense (Red Button) */}
           <button
             onClick={() => {
               setEditingItem(null);
               setModalInitialType('Expense');
               setIsAddModalOpen(true);
             }}
-            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 px-3.5 py-2.5 text-xs font-bold text-white shadow-md shadow-rose-500/25 transition-all active:scale-[0.98]"
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 px-4 py-2.5 text-xs font-black text-white shadow-md shadow-rose-500/25 transition-all active:scale-[0.98]"
           >
-            <Minus className="h-4 w-4" />
-            <span>- Cash Out (खर्च)</span>
+            <MinusCircle className="h-4 w-4" />
+            <span>- Record Cash Out (खर्च - Minus)</span>
           </button>
         </div>
+      </div>
+
+      {/* 3 Prominent Section Navigation Tabs */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+        {/* Tab 1: All / Net Balance */}
+        <button
+          type="button"
+          onClick={() => {
+            setTypeFilter('all');
+            setPage(1);
+          }}
+          className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl font-extrabold text-xs sm:text-sm transition-all ${
+            typeFilter === 'all'
+              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-slate-700'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <Layers className="h-4 w-4 text-indigo-500" />
+          <span>📊 Full Ledger (Net Hisab)</span>
+          <span className="ml-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+            ₹{(stats.netBalance || 0).toLocaleString('en-IN')}
+          </span>
+        </button>
+
+        {/* Tab 2: Cash In / Collections */}
+        <button
+          type="button"
+          onClick={() => {
+            setTypeFilter('Collection');
+            setPage(1);
+          }}
+          className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl font-extrabold text-xs sm:text-sm transition-all ${
+            typeFilter === 'Collection'
+              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <TrendingUp className="h-4 w-4" />
+          <span>💵 Cash In (Collections / जमा)</span>
+          <span className={`ml-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${
+            typeFilter === 'Collection' ? 'bg-white/20 text-white' : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
+          }`}>
+            +₹{(stats.totalCollected || 0).toLocaleString('en-IN')}
+          </span>
+        </button>
+
+        {/* Tab 3: Cash Out / Expenses */}
+        <button
+          type="button"
+          onClick={() => {
+            setTypeFilter('Expense');
+            setPage(1);
+          }}
+          className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl font-extrabold text-xs sm:text-sm transition-all ${
+            typeFilter === 'Expense'
+              ? 'bg-rose-600 text-white shadow-md shadow-rose-600/25'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <TrendingDown className="h-4 w-4" />
+          <span>🔻 Cash Out (Expenses / खर्च - Minus)</span>
+          <span className={`ml-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${
+            typeFilter === 'Expense' ? 'bg-white/20 text-white' : 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400'
+          }`}>
+            -₹{(stats.totalExpense || 0).toLocaleString('en-IN')}
+          </span>
+        </button>
       </div>
 
       {/* 4 Summary Stats Cards with Net Cash Calculation */}
@@ -461,7 +531,7 @@ export const CashCollectionPage = () => {
         <div className="relative overflow-hidden rounded-2xl border border-rose-200/80 dark:border-rose-500/20 bg-gradient-to-br from-rose-50/80 via-white to-red-50/30 dark:from-rose-950/30 dark:via-slate-900 dark:to-red-950/20 p-5 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400">
-              Total Cash Spent / Deducted
+              Total Cash Spent (खर्च)
             </span>
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400">
               <TrendingDown className="h-5 w-5" />
@@ -480,8 +550,8 @@ export const CashCollectionPage = () => {
 
       {/* Filter Toolbar Container */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs space-y-3.5">
-        {/* Row 1: Search, Type Filter, Worker Filter, Company, Payment Mode */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5">
+        {/* Row 1: Search, Worker Filter, Company, Payment Mode */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
           {/* Live Search */}
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -495,22 +565,6 @@ export const CashCollectionPage = () => {
               }}
               className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 pl-9 pr-3.5 py-2 text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             />
-          </div>
-
-          {/* Type Filter (All / Cash In / Cash Out) */}
-          <div>
-            <select
-              value={typeFilter}
-              onChange={(e) => {
-                setTypeFilter(e.target.value);
-                setPage(1);
-              }}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-            >
-              <option value="all">🔄 All Transactions (सभी)</option>
-              <option value="Collection">💵 Cash In (Collection / जमा)</option>
-              <option value="Expense">🔻 Cash Out (Spent / खर्च - Minus)</option>
-            </select>
           </div>
 
           {/* Worker Filter */}
@@ -668,7 +722,7 @@ export const CashCollectionPage = () => {
                 className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-xs font-bold text-white shadow-sm"
               >
                 <Plus className="h-4 w-4" />
-                <span>Record Cash In</span>
+                <span>Record Cash In (जमा)</span>
               </button>
               <button
                 onClick={() => {
@@ -679,7 +733,7 @@ export const CashCollectionPage = () => {
                 className="flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 px-4 py-2 text-xs font-bold text-white shadow-sm"
               >
                 <Minus className="h-4 w-4" />
-                <span>Record Cash Out</span>
+                <span>Record Cash Out (खर्च)</span>
               </button>
             </div>
           </div>
@@ -730,21 +784,21 @@ export const CashCollectionPage = () => {
                       <td className="py-3 px-4 whitespace-nowrap">
                         {isExp ? (
                           <div className="space-y-0.5">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60">
-                              <ArrowUpRight className="h-3 w-3 text-rose-500" />
-                              Cash Out
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-black bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60">
+                              <ArrowUpRight className="h-3 w-3 text-rose-500 stroke-[2.5]" />
+                              Cash Out (खर्च)
                             </span>
                             {item.category && (
-                              <p className="text-[10px] font-medium text-rose-600 dark:text-rose-400">
+                              <p className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 pl-0.5">
                                 {item.category}
                               </p>
                             )}
                           </div>
                         ) : (
                           <div className="space-y-0.5">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/60">
-                              <ArrowDownLeft className="h-3 w-3 text-emerald-500" />
-                              Cash In
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-black bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/60">
+                              <ArrowDownLeft className="h-3 w-3 text-emerald-500 stroke-[2.5]" />
+                              Cash In (जमा)
                             </span>
                           </div>
                         )}
